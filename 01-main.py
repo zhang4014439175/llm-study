@@ -122,7 +122,7 @@ def sliding_window():
     # 1.create the input–target pairs for the next word prediction task
     context_size = 4
     x = enc_sample[:context_size]
-    y = enc_sample[1:context_size+1]
+    y = enc_sample[1:context_size + 1]
     print(f"x: {x}")
     print(f"y: {y}")
 
@@ -140,6 +140,52 @@ def sliding_window():
         print(tokenizer.decode(context), "---->", tokenizer.decode([desired]))
 
 
+def create_dataloader_v1(txt, batch_size=4, max_length=256,
+                         stride=128, shuffle=True, drop_last=True,
+                         num_workers=0):
+    import tiktoken
+    from GPTdatasetV1 import GPTDatasetV1
+    from torch.utils.data import Dataset, DataLoader
+    # Initializes the tokenizer
+    tokenizer = tiktoken.get_encoding("gpt2")
+    # Creates dataset
+    dataset = GPTDatasetV1(txt, tokenizer, max_length, stride)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        drop_last=drop_last,  # True drops the last  batch if it is shorter than the specified batch_size to prevent
+        # loss spikes during training.
+        num_workers=num_workers  # The number of CPU processes to use for preprocessing
+    )
+    return dataloader
+
+
+def test_dataloader():
+    with open("the-verdict.txt", "r", encoding="utf-8") as f:
+        raw_text = f.read()
+    dataloader = create_dataloader_v1(
+        raw_text, batch_size=1, max_length=4, stride=1, shuffle=False)
+    data_iter = iter(dataloader)
+    first_batch = next(data_iter)
+    print(first_batch)
+
+    second_batch = next(data_iter)
+    print(second_batch)
+
+    # how use the data loader to sample with a batch size greate than 1
+    print("===========================")
+    dataloader = create_dataloader_v1(
+        raw_text, batch_size=8, max_length=4, stride=4,
+        shuffle=False
+    )
+    data_iter = iter(dataloader)
+    inputs, targets = next(data_iter)
+    print("Inputs:\n", inputs)
+    print("\nTargets:\n", targets)
+
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    sliding_window()
+    test_dataloader()
