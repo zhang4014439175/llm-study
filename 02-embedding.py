@@ -2,7 +2,7 @@ import re
 import torch
 
 
-def simple_example():
+def simple_example_01():
     input_ids = torch.tensor([2, 3, 5, 1])
     vocab_size = 6
     output_dim = 3
@@ -13,7 +13,9 @@ def simple_example():
     print(embedding_layer(input_ids))
 
 
+def positional_embeddings_02():
+    print()
 
 
 if __name__ == '__main__':
-    simple_example()
+    simple_example_01()
