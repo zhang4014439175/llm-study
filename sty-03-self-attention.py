@@ -23,7 +23,7 @@ def dot_products():
     print(attn_scores_2)
 
     print("============ compute dot products ==================")
-    res = 0.
+    res = 0
     for idx, element in enumerate(inputs[0]):
         print(inputs[0][idx])
         print(query[idx])
@@ -93,6 +93,44 @@ def dot_products():
     print("Row 2 sum:", row_2_sum)
     print("All row sums:", attn_weights.sum(dim=-1))
 
+    all_context_vecs = attn_weights @ inputs
+    print(all_context_vecs)
+    print("Previous 2nd context vector:", context_vec_2)
+
+
+def trainable_weights():
+    inputs = torch.tensor(
+        [[0.43, 0.15, 0.89],  # Your (x^1)
+         [0.55, 0.87, 0.66],  # journey (x^2)
+         [0.57, 0.85, 0.64],  # starts (x^3)
+         [0.22, 0.58, 0.33],  # with (x^4)
+         [0.77, 0.25, 0.10],  # one (x^5)
+         [0.05, 0.80, 0.55]]  # step (x^6)
+    )
+
+    # 这段代码展示了在PyTorch中，如何对一个输入张量（inputs）进行自注意力机制中的关键步骤之一，
+    # 即计算单个输入向量（在这个例子中是x_2，代表"journey"）的查询（query）、键（key）和值（value）向量。
+    # 自注意力机制是深度学习，特别是在自然语言处理（NLP）和某些图像处理任务中广泛使用的一种技术。下面是代码的详细解释：
+    x_2 = inputs[1]
+    d_in = inputs.shape[1]
+    d_out = 2
+
+    torch.manual_seed(123)
+    W_query = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+    W_key = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+    W_value = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+
+    # 矩阵乘法操作（@）的结果是将x_2从原始的3维特征空间转换到新的2维空间，分别得到查询、键、值向量的表示。
+    query_2 = x_2 @ W_query
+    key_2 = x_2 @ W_key
+    value_2 = x_2 @ W_value
+    print(W_query)
+    print(W_key)
+    print(W_value)
+    print(query_2)
+    print(key_2)
+    print(value_2)
+
 
 def softmax_naive(x):
     # Softmax函数是一种将K个实值向量转换为总和为1的K个实值向量的函数。
@@ -104,4 +142,4 @@ def softmax_naive(x):
 
 
 if __name__ == '__main__':
-    dot_products()
+    trainable_weights()
