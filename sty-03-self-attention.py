@@ -65,6 +65,34 @@ def dot_products():
         context_vec_2 += attn_weights_2[i] * x_i
     print(context_vec_2)
 
+    attn_scores = torch.empty(6, 6)
+    for i, x_i in enumerate(inputs):
+        for j, x_j in enumerate(inputs):
+            attn_scores[i, j] = torch.dot(x_i, x_j)
+    print(attn_scores)
+
+    # 1) Compute attention scores
+    # Compute the attention scores as dot products between the inputs.
+
+    # 2) Compute attention weights
+    # The attention weights are a normalized version of the attention scores.
+
+    # 3) Compute context vectors
+    # The context vectors are computed as a weighted sum over the inputs.
+
+    # However, for loops are generally slow, and we can achieve the same results using matrix multiplication:
+    attn_scores = inputs @ inputs.T
+    print(attn_scores)
+
+    # normalization, when dim=-1, it represent computing each row
+    # because attn_scores is a two-dimension tensor, it's last or second dimension is row,not column
+    attn_weights = torch.softmax(attn_scores, dim=-1)
+    print(attn_weights)
+
+    row_2_sum = sum([0.1385, 0.2379, 0.2333, 0.1240, 0.1082, 0.1581])
+    print("Row 2 sum:", row_2_sum)
+    print("All row sums:", attn_weights.sum(dim=-1))
+
 
 def softmax_naive(x):
     # Softmax函数是一种将K个实值向量转换为总和为1的K个实值向量的函数。
