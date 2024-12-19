@@ -111,6 +111,15 @@ def trainable_weights():
     # 这段代码展示了在PyTorch中，如何对一个输入张量（inputs）进行自注意力机制中的关键步骤之一，
     # 即计算单个输入向量（在这个例子中是x_2，代表"journey"）的查询（query）、键（key）和值（value）向量。
     # 自注意力机制是深度学习，特别是在自然语言处理（NLP）和某些图像处理任务中广泛使用的一种技术。下面是代码的详细解释：
+    # d_in:
+    # 它们的设置决定了模型的特征表示空间，并且直接影响到自注意力机制中查询（Query）、键（Key）和值（Value）向量的计算。
+    # d_in 是查询、键、值向量的输入维度，确保输入的特征能够通过权重矩阵投影到不同的表示空间
+    # d_out:
+    # d_out 是查询（Query）、键（Key）、值（Value）向量的输出维度，即这些向量在注意力机制中使用的特征维度。
+    # d_out 决定了计算注意力分数的特征空间大小,
+    # 查询向量 query 和键向量 key 的点积发生在 d_out 维度中，因此 d_out 决定了计算注意力分数时特征的抽象程度。
+    # 如果 d_out 太小，表示能力有限，可能无法捕捉复杂的特征关系；
+    # 如果 d_out 太大，可能导致计算复杂度增加且易过拟合。
     x_2 = inputs[1]
     d_in = inputs.shape[1]
     d_out = 2
@@ -121,6 +130,21 @@ def trainable_weights():
     W_value = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
 
     # 矩阵乘法操作（@）的结果是将x_2从原始的3维特征空间转换到新的2维空间，分别得到查询、键、值向量的表示。
+    # 查询（Query）、键（Key）、值（Value）是自注意力机制（Self-Attention）中的核心概念，
+    # 用于捕捉输入序列中不同部分之间的相关性。它们在计算注意力权重和生成上下文向量的过程中起着重要作用。
+    # 以下是它们的详细解释：
+    # (1) 查询（Query）：
+    # 定义：查询向量是用来提出“问题”的向量，表示某个单词或输入在当前计算中“关注的方向”。
+    # 作用：它与键向量计算点积，用于衡量当前输入（或单词）与其他输入（或单词）的相似性。
+    # 本质：表达输入的“关注需求”或上下文中希望了解的特定关系。
+    # (2) 键（Key）：
+    # 定义：键向量是对每个输入进行特征化的向量，用来回答查询向量提出的问题。
+    # 作用：它与查询向量结合，决定两个输入之间的相关性。
+    # 本质：表达输入的“特征”或“标识”。
+    # (3) 值（Value）：
+    # 定义：值向量是与键向量一一对应的向量，包含输入的实际信息。
+    # 作用：它通过注意力权重加权求和，形成输出的上下文向量。
+    # 本质：是输入携带的信息，经过注意力机制后被传递到输出。
     query_2 = x_2 @ W_query
     key_2 = x_2 @ W_key
     value_2 = x_2 @ W_value
@@ -130,6 +154,30 @@ def trainable_weights():
     print(query_2)
     print(key_2)
     print(value_2)
+
+    # 获取到输入字符的所有key值和value值
+    keys = inputs @ W_key
+    values = inputs @ W_value
+    print("keys.shape:", keys.shape)
+    print("values.shape:", values.shape)
+
+    # 这个是需要查询的字符 journey 的key，根据 query值 来进行计算注意力分数
+    keys_2 = keys[1]
+    attn_score_22 = query_2.dot(keys_2)
+    print(attn_score_22)
+
+    # 所有的注意力分数
+    attn_scores_2 = query_2 @ keys.T
+    print(attn_scores_2)
+
+    # 计算占比
+    d_k = keys.shape[-1]
+    attn_weights_2 = torch.softmax(attn_scores_2 / d_k ** 0.5, dim=-1)
+    print(attn_weights_2)
+
+    # 得到 journey 的上下文向量
+    context_vec_2 = attn_weights_2 @ values
+    print(context_vec_2)
 
 
 def softmax_naive(x):
