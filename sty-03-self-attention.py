@@ -186,6 +186,15 @@ def trainable_weights():
     print(context_vec_2)
 
 
+def softmax_naive(x):
+    # Softmax函数是一种将K个实值向量转换为总和为1的K个实值向量的函数。
+    # 具体来说，对于输入向量z = [z1, z2, ..., zk]，Softmax函数将其转换为输出向量y = [y1, y2, ..., yk]，
+    # 其中每个元素yi的计算公式为：
+    #  yi = exp(zi) / Σj exp(zj)
+    # 这里，exp(zi)表示zi的指数函数值，Σj exp(zj)表示所有输入元素指数函数值的和，用于归一化，确保输出向量的元素之和为1。
+    return torch.exp(x) / torch.exp(x).sum(dim=0)
+
+
 def use_class():
     inputs = torch.tensor(
         [[0.43, 0.15, 0.89],  # Your (x^1)
@@ -198,6 +207,8 @@ def use_class():
     torch.manual_seed(123)
     d_in = inputs.shape[1]
     d_out = 2
+    W_value = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+    values = inputs @ W_value
 
     # SelfAttention_v1 and SelfAttention_v2 give different outputs because
     # they use different initial weights for the weight matrices since nn.Linear uses a more
@@ -210,14 +221,47 @@ def use_class():
     sa_v2 = SelfAttention_v2(d_in, d_out)
     print(sa_v2(inputs))
 
+    """
+    掩码注意力分数计算为上下文向量
+    """
+    queries = sa_v2.W_query(inputs)
+    keys = sa_v2.W_key(inputs)
+    attn_scores = queries @ keys.T
+    attn_weights = torch.softmax(attn_scores / keys.shape[-1] ** 0.5, dim=-1)
+    print("===================================================")
+    print(attn_weights)
 
-def softmax_naive(x):
-    # Softmax函数是一种将K个实值向量转换为总和为1的K个实值向量的函数。
-    # 具体来说，对于输入向量z = [z1, z2, ..., zk]，Softmax函数将其转换为输出向量y = [y1, y2, ..., yk]，
-    # 其中每个元素yi的计算公式为：
-    #  yi = exp(zi) / Σj exp(zj)
-    # 这里，exp(zi)表示zi的指数函数值，Σj exp(zj)表示所有输入元素指数函数值的和，用于归一化，确保输出向量的元素之和为1。
-    return torch.exp(x) / torch.exp(x).sum(dim=0)
+    # create a mask where the values above the diagonal are zero
+    context_length = attn_scores.shape[0]
+    mask_simple = torch.tril(torch.ones(context_length, context_length))
+    print("========== mask_simple ===========")
+    print(mask_simple)
+
+    # multiply this mask with the attention weights to zero-out the values above the diagonal:
+    masked_simple = attn_weights * mask_simple
+    print(masked_simple)
+
+    # renormalize the attention weights to sum up to 1
+    row_sums = masked_simple.sum(dim=-1, keepdim=True)
+    masked_simple_norm = masked_simple / row_sums
+    print(row_sums)
+    print(masked_simple_norm)
+
+    # torch.ones(context_length, context_length) 生成一个全1矩阵
+    # 使用torch.triu函数生成一个上三角矩阵
+    # 应用掩码到注意力分数
+    # mask.bool() 将mask矩阵转换为布尔类型，即1变为True，0变为False。
+    # attn_scores.masked_fill(..., -torch.inf)：掩码注意力分数
+    # 然后，使用masked_fill函数，将attn_scores中对应于mask为True（即原mask矩阵中值为1的位置）的元素替换为-torch.inf。
+    mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
+    masked = attn_scores.masked_fill(mask.bool(), -torch.inf)
+    print(mask)
+    print(masked)
+    attn_weights = torch.softmax(masked / keys.shape[-1] ** 0.5, dim=1)
+    print(attn_weights)
+    print(values)
+    context_vec = attn_weights @ values
+    print(context_vec)
 
 
 if __name__ == '__main__':
