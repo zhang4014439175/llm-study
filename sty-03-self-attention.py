@@ -195,7 +195,7 @@ def softmax_naive(x):
     return torch.exp(x) / torch.exp(x).sum(dim=0)
 
 
-def use_class():
+def causal_attention():
     inputs = torch.tensor(
         [[0.43, 0.15, 0.89],  # Your (x^1)
          [0.55, 0.87, 0.66],  # journey (x^2)
@@ -264,7 +264,7 @@ def use_class():
     print(context_vec)
 
 
-def dropout():
+def causal_attention_class():
     # inputs
     inputs = torch.tensor(
         [[0.43, 0.15, 0.89],  # Your (x^1)
@@ -282,6 +282,7 @@ def dropout():
     sa_v2 = SelfAttention_v2(d_in, d_out)
     queries = sa_v2.W_query(inputs)
     keys = sa_v2.W_key(inputs)
+    values = sa_v2.W_value(inputs)
     attn_scores = queries @ keys.T
     context_length = attn_scores.shape[0]
     mask = torch.triu(torch.ones(context_length, context_length), diagonal=1)
@@ -293,11 +294,32 @@ def dropout():
     example = torch.ones(6, 6)
 
     torch.manual_seed(123)
-    print(dropout(attn_weights))
+    attn_weights = dropout(attn_weights)
+    attn_score = attn_weights @ values
+    print(attn_weights)
+    print(attn_score)
+
+    # use causal attention class
+    batch = torch.stack((inputs, inputs), dim=0)
+    print(batch.shape)
+    print(batch)
+
+    from causal_attention import CausalAttention
+    torch.manual_seed(123)
+    context_length = batch.shape[1]
+    ca = CausalAttention(d_in, d_out, context_length, 0.0)
+    context_vecs = ca(batch)
+    print("context_vecs.shape:", context_vecs.shape)
+    print("context_vecs:", context_vecs)
+
+
+def multi_head_attention():
+    print("multi_head_attention")
+
 
 
 
 if __name__ == '__main__':
     # trainable_weights()
     # use_class()
-    dropout()
+    causal_attention_class()
