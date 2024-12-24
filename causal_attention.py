@@ -20,8 +20,14 @@ class CausalAttention(nn.Module):
         We transpose dimensions 1 and 2, keeping the batch dimension at the first position (0).
         In PyTorch, operations with a trailing underscore are performed in-place, avoiding unnecessary memory copies
         """
+        # b是批处理大小
+        # token的数量，6个单词
+        # d_in是每个元素的特征维度
         b, num_tokens, d_in = x.shape
         keys = self.W_key(x)
+        print("kkkkkkkkkkkkkkkkkkkk")
+        print(keys)
+        # self.W_query(x)等价于x @ self.W_query.weight.T + self.W_query.bias
         queries = self.W_query(x)
         values = self.W_value(x)
         attn_scores = queries @ keys.transpose(1, 2)

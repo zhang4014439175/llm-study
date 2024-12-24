@@ -289,6 +289,7 @@ def causal_attention_class():
     masked = attn_scores.masked_fill(mask.bool(), -torch.inf)
     attn_weights = torch.softmax(masked / keys.shape[-1] ** 0.5, dim=1)
 
+    # create masked
     torch.manual_seed(123)
     dropout = torch.nn.Dropout(0.5)
     example = torch.ones(6, 6)
@@ -299,7 +300,7 @@ def causal_attention_class():
     print(attn_weights)
     print(attn_score)
 
-    # use causal attention class
+    # batch: use causal attention class
     batch = torch.stack((inputs, inputs), dim=0)
     print(batch.shape)
     print(batch)
@@ -307,6 +308,7 @@ def causal_attention_class():
     from causal_attention import CausalAttention
     torch.manual_seed(123)
     context_length = batch.shape[1]
+    print(context_length)
     ca = CausalAttention(d_in, d_out, context_length, 0.0)
     context_vecs = ca(batch)
     print("context_vecs.shape:", context_vecs.shape)
@@ -315,7 +317,28 @@ def causal_attention_class():
 
 def multi_head_attention():
     print("multi_head_attention")
+    # batch like up
+    # inputs
+    inputs = torch.tensor(
+        [[0.43, 0.15, 0.89],  # Your (x^1)
+         [0.55, 0.87, 0.66],  # journey (x^2)
+         [0.57, 0.85, 0.64],  # starts (x^3)
+         [0.22, 0.58, 0.33],  # with (x^4)
+         [0.77, 0.25, 0.10],  # one (x^5)
+         [0.05, 0.80, 0.55]]  # step (x^6)
+    )
+    batch = torch.stack((inputs, inputs), dim=0)
+    torch.manual_seed(123)
+    context_length = batch.shape[1]  # This is the number of tokens
+    d_in, d_out = 3, 2
 
+    from multi_head_attention import MultiHeadAttentionWrapper
+    mha = MultiHeadAttentionWrapper(
+        d_in, d_out, context_length, 0.0, num_heads=2
+    )
+    context_vecs = mha(batch)
+    print(context_vecs)
+    print("context_vecs.shape:", context_vecs.shape)
 
 
 
@@ -323,3 +346,4 @@ if __name__ == '__main__':
     # trainable_weights()
     # use_class()
     causal_attention_class()
+    # multi_head_attention()
