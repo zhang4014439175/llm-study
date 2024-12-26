@@ -332,7 +332,7 @@ def multi_head_attention():
     context_length = batch.shape[1]  # This is the number of tokens
     d_in, d_out = 3, 2
 
-    from multi_head_attention import MultiHeadAttentionWrapper,MultiHeadAttention
+    from multi_head_attention import MultiHeadAttentionWrapper, MultiHeadAttention
     mha = MultiHeadAttentionWrapper(
         d_in, d_out, context_length, 0.0, num_heads=2
     )
@@ -373,7 +373,9 @@ def mutil_head_test():
     second_res = second_head @ second_head.T
     print("\nSecond head:\n", second_res)
 
+
 if __name__ == '__main__':
+    # 91页Summary
     # trainable_weights()
     # use_class()
     # causal_attention_class()
