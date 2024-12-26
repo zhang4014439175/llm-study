@@ -25,8 +25,6 @@ class CausalAttention(nn.Module):
         # d_in是每个元素的特征维度
         b, num_tokens, d_in = x.shape
         keys = self.W_key(x)
-        print("kkkkkkkkkkkkkkkkkkkk")
-        print(keys)
         # self.W_query(x)等价于x @ self.W_query.weight.T + self.W_query.bias
         queries = self.W_query(x)
         values = self.W_value(x)

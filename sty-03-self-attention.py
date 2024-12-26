@@ -332,7 +332,7 @@ def multi_head_attention():
     context_length = batch.shape[1]  # This is the number of tokens
     d_in, d_out = 3, 2
 
-    from multi_head_attention import MultiHeadAttentionWrapper
+    from multi_head_attention import MultiHeadAttentionWrapper,MultiHeadAttention
     mha = MultiHeadAttentionWrapper(
         d_in, d_out, context_length, 0.0, num_heads=2
     )
@@ -340,10 +340,42 @@ def multi_head_attention():
     print(context_vecs)
     print("context_vecs.shape:", context_vecs.shape)
 
+    torch.manual_seed(123)
+    batch_size, context_length, d_in = batch.shape
+    d_out = 2
+    mha = MultiHeadAttention(d_in, d_out, context_length, 0.0, num_heads=2)
+    context_vecs = mha(batch)
+    print(context_vecs)
+    print("context_vecs.shape:", context_vecs.shape)
 
+
+def mutil_head_test():
+    # The shape of this tensor is (b, num_heads, num_tokens, head_dim) = (1, 2, 3, 4).
+    a = torch.tensor([[[[0.2745, 0.6584, 0.2775, 0.8573],
+                        [0.8993, 0.0390, 0.9268, 0.7388],
+                        [0.7179, 0.7058, 0.9156, 0.4340]],
+                       [[0.0772, 0.3565, 0.1479, 0.5331],
+                        [0.4066, 0.2318, 0.4545, 0.9737],
+                        [0.4606, 0.5159, 0.4220, 0.5786]]]])
+    # print(a.transpose(2, 3))
+    # print(a @ a.transpose(2, 3))
+
+    # 通过索引a[0, 0, :, :]，我们选择了
+    #   批次中的第一个元素（0，假设批次大小为第一维）、
+    #   第一个头（0，假设头数量为第二维）的
+    #   所有序列长度/令牌（:，表示选择这一维的所有元素）和
+    #   所有特征维度（:，同样表示选择这一维的所有元素）。
+    first_head = a[0, 0, :, :]
+    print(first_head)
+    first_res = first_head @ first_head.T
+    print("First head:\n", first_res)
+    second_head = a[0, 1, :, :]
+    second_res = second_head @ second_head.T
+    print("\nSecond head:\n", second_res)
 
 if __name__ == '__main__':
     # trainable_weights()
     # use_class()
-    causal_attention_class()
-    # multi_head_attention()
+    # causal_attention_class()
+    multi_head_attention()
+    # mutil_head_test()
