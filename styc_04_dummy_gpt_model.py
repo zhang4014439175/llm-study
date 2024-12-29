@@ -35,6 +35,7 @@ class DummyTransformerBlock(nn.Module):
     """
     A simple placeholder class that will be replaced by a real TransformerBlock later
     """
+
     def __init__(self, cfg):
         super().__init__()
 
@@ -47,8 +48,63 @@ class DummyLayerNorm(nn.Module):
     A simple placeholder class that will be replaced by a real LayerNorm later
     The parameters here are just to mimic the LayerNorm interface.
     """
+
     def __init__(self, normalized_shape, eps=1e-5):
         super().__init__()
 
     def forward(self, x):
         return x
+
+
+class LayerNorm(nn.Module):
+    def __init__(self, emb_dim):
+        super().__init__()
+        # is a small constant (epsilon) added to the variance to prevent division by zero
+        self.eps = 1e-5
+        # 1.The scale and shift are two trainable parameters (of the
+        #   same dimension as the input) that the LLM automatically adjusts during training if it
+        #   is determined that doing so would improve the model’s performance on its training task.
+        # 2.This allows the model to learn appropriate scaling and shifting that best suit the
+        #   data it is processing
+        self.scale = nn.Parameter(torch.ones(emb_dim))
+        self.shift = nn.Parameter(torch.zeros(emb_dim))
+
+    def forward(self, x):
+        mean = x.mean(dim=-1, keepdim=True)
+        var = x.var(dim=-1, keepdim=True, unbiased=False)
+        # x - mean: x中所有元素减去均值得到中心化数据，他到均值为0
+        # 1.举例：[2, 4, 6, 8, 10]
+        #   mean：(2 + 4 + 6 + 8 + 10) / 5 = 6 求得 [-4, -2, 0, 2, 4]
+        #   方差：(1/n) * Σ(x_i - μ)^2 = (1/5) * [(-4)^2 + (-2)^2 + 0^2 + 2^2 + 4^2]
+        #   标准差：√方差 = √8 ≈ 2.83
+        #   归一化后的数据 = [-4/2.83, -2/2.83, 0/2.83, 2/2.83, 4/2.83] ≈ [-1.41, -0.71, 0, 0.71, 1.41]
+        # 2.归一化后到特点：
+        #   均值接近0（由于中心化）。
+        #   方差接近1（由于除以了标准差）。
+        #   数据点分布在以0为均值、1为标准差的正态分布（或近似正态分布）上。
+        norm_x = (x - mean) / torch.sqrt(var + self.eps)
+        return self.scale * norm_x + self.shift
+
+
+class GELU(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return 0.5 * x * (1 + torch.tanh(
+            torch.sqrt(torch.tensor(2.0 / torch.pi)) *
+            (x + 0.044715 * torch.pow(x, 3))
+        ))
+
+
+class FeedForward(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(cfg["emb_dim"], 4 * cfg["emb_dim"]),
+            GELU(),
+            nn.Linear(4 * cfg["emb_dim"], cfg["emb_dim"]),
+        )
+
+    def forward(self, x):
+        return self.layers(x)

@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-def gpt_config():
+def GPT_CONFIG_124M():
     GPT_CONFIG_124M = {
         "vocab_size": 50257,  # Vocabulary size 50,257 words
         "context_length": 1024,  # Context length the maximum number of input tokens
@@ -30,7 +30,7 @@ def gpt_base_01():
 
     from styc_04_dummy_gpt_model import DummyGPTModel
     torch.manual_seed(123)
-    model = DummyGPTModel(gpt_config())
+    model = DummyGPTModel(GPT_CONFIG_124M())
     logits = model(batch)
     print("Output shape:", logits.shape)
     print(logits)
@@ -70,6 +70,37 @@ def gpt_base_01():
     print("Mean:\n", mean)
     print("Variance:\n", var)
 
+    torch.set_printoptions(sci_mode=False)
+
+    from styc_04_dummy_gpt_model import LayerNorm
+    ln = LayerNorm(emb_dim=5)
+    out_ln = ln(batch_example)
+    mean = out_ln.mean(dim=-1, keepdim=True)
+    var = out_ln.var(dim=-1, unbiased=False, keepdim=True)
+    print("Mean:\n", mean)
+    print("Variance:\n", var)
+
+    import matplotlib.pyplot as plt
+    from styc_04_dummy_gpt_model import GELU
+    gelu, relu = GELU(), nn.ReLU()
+    x = torch.linspace(-3, 3, 100)
+    y_gelu, y_relu = gelu(x), relu(x)
+    plt.figure(figsize=(8, 3))
+    for i, (y, label) in enumerate(zip([y_gelu, y_relu], ["GELU", "ReLU"]), 1):
+        plt.subplot(1, 2, i)
+        plt.plot(x, y)
+        plt.title(f"{label} activation function")
+        plt.xlabel("x")
+        plt.ylabel(f"{label}(x)")
+        plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    from styc_04_dummy_gpt_model import FeedForward
+    ffn = FeedForward(GPT_CONFIG_124M())
+    x = torch.rand(2, 3, 768)
+    out = ffn(x)
+    print(out.shape)
 
 
 if __name__ == '__main__':
