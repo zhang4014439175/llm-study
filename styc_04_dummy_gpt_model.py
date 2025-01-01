@@ -108,3 +108,63 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
+
+
+class ExampleDeepNeuralNetwork(nn.Module):
+    def __init__(self, layer_sizes, use_shortcut):
+        super().__init__()
+        self.use_shortcut = use_shortcut
+        self.layers = nn.ModuleList([
+            nn.Sequential(nn.Linear(layer_sizes[0], layer_sizes[1]),
+                          GELU()),
+            nn.Sequential(nn.Linear(layer_sizes[1], layer_sizes[2]),
+                          GELU()),
+            nn.Sequential(nn.Linear(layer_sizes[2], layer_sizes[3]),
+                          GELU()),
+            nn.Sequential(nn.Linear(layer_sizes[3], layer_sizes[4]),
+                          GELU()),
+            nn.Sequential(nn.Linear(layer_sizes[4], layer_sizes[5]),
+                          GELU())
+        ])
+
+    def forward(self, x):
+        for layer in self.layers:
+            layer_output = layer(x)
+            if self.use_shortcut and x.shape == layer_output.shape:
+                x = x + layer_output
+            else:
+                x = layer_output
+        return x
+
+
+from multi_head_attention import MultiHeadAttention
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+
+        self.att = MultiHeadAttention(
+            d_in=cfg["emb_dim"],
+            d_out=cfg["emb_dim"],
+            context_length=cfg["context_length"],
+            num_heads=cfg["n_heads"],
+            dropout=cfg["drop_rate"],
+            qkv_bias=cfg["qkv_bias"])
+        self.ff = FeedForward(cfg)
+        self.norm1 = LayerNorm(cfg["emb_dim"])
+        self.norm2 = LayerNorm(cfg["emb_dim"])
+        self.drop_shortcut = nn.Dropout(cfg["drop_rate"])
+
+    def forward(self, x):
+        shortcut = x
+        x = self.norm1(x)
+        x = self.att(x)
+        x = self.drop_shortcut(x)
+        x = x + shortcut
+        shortcut = x
+        x = self.norm2(x)
+        x = self.ff(x)
+        x = self.drop_shortcut(x)
+        x = x + shortcut
+        return x

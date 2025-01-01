@@ -80,6 +80,9 @@ def gpt_base_01():
     print("Mean:\n", mean)
     print("Variance:\n", var)
 
+
+def feed_forward():
+    # GELU activations
     import matplotlib.pyplot as plt
     from styc_04_dummy_gpt_model import GELU
     gelu, relu = GELU(), nn.ReLU()
@@ -103,5 +106,54 @@ def gpt_base_01():
     print(out.shape)
 
 
+def shortcut_connections():
+    print(torch.backends.mps.is_available())
+    from styc_04_dummy_gpt_model import ExampleDeepNeuralNetwork
+    layer_sizes = [3, 3, 3, 3, 3, 1]
+    sample_input = torch.tensor([[1., 0., -1.]])
+    torch.manual_seed(123)
+    model_without_shortcut = ExampleDeepNeuralNetwork(
+        layer_sizes, use_shortcut=False
+    )
+
+    print_gradients(model_without_shortcut, sample_input)
+
+    print("========== open use_shortcut ========== ")
+    torch.manual_seed(123)
+    model_with_shortcut = ExampleDeepNeuralNetwork(
+        layer_sizes, use_shortcut=True
+    )
+    print_gradients(model_with_shortcut, sample_input)
+
+
+def print_gradients(model, x):
+    # 112 A.4 and A.7 in appendix A
+    output = model(x)
+    target = torch.tensor([[0.]])
+    loss = nn.MSELoss()
+    loss = loss(output, target)
+    loss.backward()
+    for name, param in model.named_parameters():
+        # if 'weight' in name and param.grad is not None:
+        #     print(f"{name} has gradient mean of {param.grad.abs().mean().item()}")
+        # else:
+        #     print(f"{name} has no gradient")
+        if 'weight' in name:
+            print(f"{name} has gradient mean of {param.grad.abs().mean().item()}")
+
+
+def transformer_block():
+    from styc_04_dummy_gpt_model import TransformerBlock
+    torch.manual_seed(123)
+    x = torch.rand(2, 4, 768)
+    block = TransformerBlock(GPT_CONFIG_124M())
+    output = block(x)
+    print("Input shape:", x.shape)
+    print("Output shape:", output.shape)
+
+
 if __name__ == '__main__':
-    gpt_base_01()
+    # gpt_base_01()
+    # feed_forward()
+    # shortcut_connections()
+    transformer_block()
