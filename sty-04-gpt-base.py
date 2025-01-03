@@ -127,11 +127,18 @@ def shortcut_connections():
 
 
 def print_gradients(model, x):
+    # 用于打印模型中权重参数梯度均值
     # 112 A.4 and A.7 in appendix A
+    # 将输入数据 x 传递给模型，获取模型的输出。
+    # todo 前向传播
     output = model(x)
+    # 创建一个目标张量，这里是一个包含单个元素0的二维张量，用于计算损失函数。
     target = torch.tensor([[0.]])
+    # 创建一个均方误差损失（Mean Squared Error Loss）的实例
     loss = nn.MSELoss()
+    # 计算模型输出 output 和目标张量 target 之间的均方误差损失。
     loss = loss(output, target)
+    # 进行反向传播，计算损失函数关于模型参数的梯度
     loss.backward()
     for name, param in model.named_parameters():
         # if 'weight' in name and param.grad is not None:
@@ -152,8 +159,29 @@ def transformer_block():
     print("Output shape:", output.shape)
 
 
+def gpt_model_test():
+    import tiktoken
+    tokenizer = tiktoken.get_encoding("gpt2")
+    batch = []
+    txt1 = "Every effort moves you"
+    txt2 = "Every day holds a"
+    batch.append(torch.tensor(tokenizer.encode(txt1)))
+    batch.append(torch.tensor(tokenizer.encode(txt2)))
+    batch = torch.stack(batch, dim=0)
+    print(batch)
+
+    from styc_04_dummy_gpt_model import GPTModel
+    torch.manual_seed(123)
+    model = GPTModel(GPT_CONFIG_124M())
+    out = model(batch)
+    print("Input batch:\n", batch)
+    print("\nOutput shape:", out.shape)
+    print(out)
+
+
 if __name__ == '__main__':
     # gpt_base_01()
     # feed_forward()
     # shortcut_connections()
-    transformer_block()
+    # transformer_block()
+    gpt_model_test()

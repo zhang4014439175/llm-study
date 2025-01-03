@@ -128,6 +128,7 @@ class ExampleDeepNeuralNetwork(nn.Module):
         ])
 
     def forward(self, x):
+        # 前向传播中执行每一个隐藏层
         for layer in self.layers:
             layer_output = layer(x)
             if self.use_shortcut and x.shape == layer_output.shape:
@@ -168,3 +169,37 @@ class TransformerBlock(nn.Module):
         x = self.drop_shortcut(x)
         x = x + shortcut
         return x
+
+
+class GPTModel(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        # initializes the token and positional embedding layers
+        self.tok_emb = nn.Embedding(cfg["vocab_size"], cfg["emb_dim"])
+        self.pos_emb = nn.Embedding(cfg["context_length"], cfg["emb_dim"])
+        self.drop_emb = nn.Dropout(cfg["drop_rate"])
+
+        # creates a sequential stack of TransformerBlock modules
+        self.trf_blocks = nn.Sequential(
+            *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])])
+
+        self.final_norm = LayerNorm(cfg["emb_dim"])
+        self.out_head = nn.Linear(
+            cfg["emb_dim"], cfg["vocab_size"], bias=False
+        )
+
+    def forward(self, in_idx):
+        batch_size, seq_len = in_idx.shape
+        tok_embeds = self.tok_emb(in_idx)
+
+        # The device setting will allow us to train the model on a CPU or GPU, depending on which
+        # device the input data sits on.
+        pos_embeds = self.pos_emb(
+            torch.arange(seq_len, device=in_idx.device)
+        )
+        x = tok_embeds + pos_embeds
+        x = self.drop_emb(x)
+        x = self.trf_blocks(x)
+        x = self.final_norm(x)
+        logits = self.out_head(x)
+        return logits
