@@ -200,17 +200,18 @@ def gpt_model_test():
     print(f"Total size of the model: {total_size_mb:.2f} MB")
 
 
-def generate_text_simple(model, idx,
-                         max_new_tokens, context_size):
+def generate_text_simple(model, idx, max_new_tokens, context_size):
+    # 这段代码演示了使用PyTorch为语言模型生成循环的简单实现。它迭代生成指定数量的新令牌，
+    # 裁剪当前上下文以适应模型的最大上下文大小，计算预测，然后根据最大概率预测选择下一个令牌。
     for _ in range(max_new_tokens):
         idx_cond = idx[:, -context_size:]
-    with torch.no_grad():
-        logits = model(idx_cond)
+        with torch.no_grad():
+            logits = model(idx_cond)
 
-    logits = logits[:, -1, :]
-    probas = torch.softmax(logits, dim=-1)
-    idx_next = torch.argmax(probas, dim=-1, keepdim=True)
-    idx = torch.cat((idx, idx_next), dim=1)
+        logits = logits[:, -1, :]
+        probas = torch.softmax(logits, dim=-1)
+        idx_next = torch.argmax(probas, dim=-1, keepdim=True)
+        idx = torch.cat((idx, idx_next), dim=1)
     return idx
 
 
@@ -238,10 +239,36 @@ def generate_text():
     print(decoded_text)
 
 
+def generate_next_token():
+    import tiktoken
+    tokenizer = tiktoken.get_encoding("gpt2")
+    start_context = "Hello, I am"
+    encoded = tokenizer.encode(start_context)
+    print("encoded:", encoded)
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+    print("encoded_tensor.shape:", encoded_tensor.shape)
+
+    from styc_04_dummy_gpt_model import GPTModel
+    model = GPTModel(GPT_CONFIG_124M())
+    model.eval()
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=6,
+        context_size=GPT_CONFIG_124M()["context_length"]
+    )
+    print("Output:", out)
+    print("Output length:", len(out[0]))
+
+    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+    print(decoded_text)
+
+
 if __name__ == '__main__':
     # gpt_base_01()
     # feed_forward()
     # shortcut_connections()
     # transformer_block()
     # gpt_model_test()
-    generate_text()
+    # generate_text()
+    generate_next_token()
