@@ -184,22 +184,30 @@ class GPTModel(nn.Module):
             *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])])
 
         self.final_norm = LayerNorm(cfg["emb_dim"])
+        # 对于GPTModel类中的out_head，它是一个nn.Linear层，用于将Transformer模型的输出x映射到词汇表大小的logits向量上。
+        # 这个层的权重（我们可以称之为W_out）在模型初始化时被随机分配，并在训练过程中根据损失函数的梯度进行更新。
         self.out_head = nn.Linear(
             cfg["emb_dim"], cfg["vocab_size"], bias=False
         )
 
     def forward(self, in_idx):
         batch_size, seq_len = in_idx.shape
+        # 通过词嵌入层将token索引转换为嵌入向量
         tok_embeds = self.tok_emb(in_idx)
 
         # The device setting will allow us to train the model on a CPU or GPU, depending on which
         # device the input data sits on.
+        # 生成位置嵌入向量（pos_embeds），其长度与输入序列的长度相同，并将它们添加到嵌入向量上，以结合位置信息。
         pos_embeds = self.pos_emb(
             torch.arange(seq_len, device=in_idx.device)
         )
         x = tok_embeds + pos_embeds
+        # 应用丢弃层（drop_emb）以减少过拟合。
         x = self.drop_emb(x)
+        # 将结合位置信息的嵌入向量传递给Transformer块的序列（trf_blocks），以生成处理后的序列表示
         x = self.trf_blocks(x)
+        # 应用层归一化（final_norm）以稳定输出。
         x = self.final_norm(x)
+        # 通过输出头（out_head）将处理后的序列表示转换为logits向量，用于预测下一个token。
         logits = self.out_head(x)
         return logits

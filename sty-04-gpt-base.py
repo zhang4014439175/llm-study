@@ -178,10 +178,70 @@ def gpt_model_test():
     print("\nOutput shape:", out.shape)
     print(out)
 
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total number of parameters: {total_params:,}")
+
+    print("Token embedding layer shape:", model.tok_emb.weight.shape)
+    print("Output layer shape:", model.out_head.weight.shape)
+
+    # 模型总参数减去输出层参数
+    # sum(p.numel() for p in model.out_head.parameters()) 计算输出层所有参数的总数。
+    # total_params_gpt2 是计算得到的模型总参数数量减去输出层参数数量后的结果.
+    total_params_gpt2 = (
+            total_params - sum(p.numel() for p in model.out_head.parameters())
+    )
+    print(f"Number of trainable parameters "
+          f"considering weight tying: {total_params_gpt2:,}"
+          )
+
+    # 计算模型需要内存
+    total_size_bytes = total_params * 4
+    total_size_mb = total_size_bytes / (1024 * 1024)
+    print(f"Total size of the model: {total_size_mb:.2f} MB")
+
+
+def generate_text_simple(model, idx,
+                         max_new_tokens, context_size):
+    for _ in range(max_new_tokens):
+        idx_cond = idx[:, -context_size:]
+    with torch.no_grad():
+        logits = model(idx_cond)
+
+    logits = logits[:, -1, :]
+    probas = torch.softmax(logits, dim=-1)
+    idx_next = torch.argmax(probas, dim=-1, keepdim=True)
+    idx = torch.cat((idx, idx_next), dim=1)
+    return idx
+
+
+def generate_text():
+    import tiktoken
+    tokenizer = tiktoken.get_encoding("gpt2")
+    start_context = "Hello, I am"
+    encoded = tokenizer.encode(start_context)
+    print("encoded:", encoded)
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+    print("encoded_tensor.shape:", encoded_tensor.shape)
+
+    from styc_04_dummy_gpt_model import GPTModel
+    model = GPTModel(GPT_CONFIG_124M())
+    model.eval()
+    out = generate_text_simple(
+        model=model,
+        idx=encoded_tensor,
+        max_new_tokens=6,
+        context_size=GPT_CONFIG_124M()["context_length"]
+    )
+    print("Output:", out)
+    print("Output length:", len(out[0]))
+    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
+    print(decoded_text)
+
 
 if __name__ == '__main__':
     # gpt_base_01()
     # feed_forward()
     # shortcut_connections()
     # transformer_block()
-    gpt_model_test()
+    # gpt_model_test()
+    generate_text()
