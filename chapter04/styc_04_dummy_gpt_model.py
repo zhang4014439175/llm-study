@@ -138,7 +138,7 @@ class ExampleDeepNeuralNetwork(nn.Module):
         return x
 
 
-from multi_head_attention import MultiHeadAttention
+from chapter03.multi_head_attention import MultiHeadAttention
 
 
 class TransformerBlock(nn.Module):

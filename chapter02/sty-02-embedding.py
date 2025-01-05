@@ -1,4 +1,3 @@
-import re
 import torch
 
 
@@ -17,8 +16,8 @@ def create_dataloader_v1(txt, batch_size=4, max_length=256,
                          stride=128, shuffle=True, drop_last=True,
                          num_workers=0):
     import tiktoken
-    from GPTdatasetV1 import GPTDatasetV1
-    from torch.utils.data import Dataset, DataLoader
+    from chapter01.GPTdatasetV1 import GPTDatasetV1
+    from torch.utils.data import DataLoader
     # Initializes the tokenizer
     tokenizer = tiktoken.get_encoding("gpt2")
     # Creates dataset
@@ -39,7 +38,7 @@ def positional_embeddings_02():
     output_dim = 256
     token_embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
 
-    with open("the-verdict.txt", "r", encoding="utf-8") as f:
+    with open("../chapter01/the-verdict.txt", "r", encoding="utf-8") as f:
         raw_text = f.read()
     max_length = 4
     dataloader = create_dataloader_v1(

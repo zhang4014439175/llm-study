@@ -59,7 +59,7 @@ def split_file():
             break
 
     # 3.use tokenizer class to encode or decode text
-    from simple_tokenizer_v1 import SimpleTokenizerV1
+    from chapter02.simple_tokenizer_v1 import SimpleTokenizerV1
     tokenizer = SimpleTokenizerV1(vocab)
     text = """"It's the last he painted, you know," 
      Mrs. Gisburn said with pardonable pride."""
@@ -87,7 +87,7 @@ def split_file():
     text2 = "In the sunlit terraces of the palace."
     text = " <|endoftext|> ".join((text1, text2))
     print(text)
-    from simple_tokenizer_v2 import SimpleTokenizerV2
+    from chapter02.simple_tokenizer_v2 import SimpleTokenizerV2
     tokenizer = SimpleTokenizerV2(vocab)
     print(tokenizer.encode(text))
     print(tokenizer.decode(tokenizer.encode(text)))
@@ -145,7 +145,7 @@ def create_dataloader_v1(txt, batch_size=4, max_length=256,
                          num_workers=0):
     import tiktoken
     from GPTdatasetV1 import GPTDatasetV1
-    from torch.utils.data import Dataset, DataLoader
+    from torch.utils.data import DataLoader
     # Initializes the tokenizer
     tokenizer = tiktoken.get_encoding("gpt2")
     # Creates dataset
