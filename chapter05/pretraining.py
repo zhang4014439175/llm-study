@@ -31,8 +31,12 @@ def text_to_token_ids(text, tokenizer):
     return encoded_tensor
 
 
+# 这个方法 token_ids_to_text 的作用是将一个包含token IDs的Tensor转换为对应的文本字符串。
+# 这个过程通常用于自然语言处理（NLP）任务中，特别是在使用基于token的模型（如BERT、GPT等）时。
 def token_ids_to_text(token_ids, tokenizer):
+    # 移除token_ids的第一个维度（通常是批次大小维度）
     flat = token_ids.squeeze(0)
+    # 将Tensor转换为Python列表，然后使用tokenizer的decode方法将列表转换为文本
     return tokenizer.decode(flat.tolist())
 
 
@@ -88,6 +92,7 @@ def no01_calculating_the_text_generation_loss():
 
     # 1、We can complete steps 3 and 4 by applying the argmax function to the probability scores to obtain the
     # corresponding token IDs:
+    # 用于返回指定维度上最大值的索引。在这个上下文中，它被用来找到每个位置上概率最高的token的索引。
     token_ids = torch.argmax(probas, dim=-1, keepdim=True)
     print("Token IDs:\n", token_ids)
 
@@ -98,6 +103,10 @@ def no01_calculating_the_text_generation_loss():
           f" {token_ids_to_text(token_ids[0].flatten(), tokenizer)}")
 
     # 2、we can print the initial softmax probability scores corresponding to the target tokens
+    # 从probas中提取第0个文本样本在位置0, 1, 2上对应于targets[0]指定索引的概率值
+    # 这里[0, 1, 2]是一个索引列表，指定了感兴趣的位置
+    # targets[text_idx]给出了在这些位置上我们感兴趣的词汇表中的索引
+    # 两个例子为了演示loss的计算
     text_idx = 0
     target_probas_1 = probas[text_idx, [0, 1, 2], targets[text_idx]]
     print("Text 1:", target_probas_1)
@@ -350,6 +359,6 @@ def train_model_simple(model, train_loader, val_loader, optimizer, device, num_e
 
 if __name__ == '__main__':
     # init_gpt()
-    # no01_calculating_the_text_generation_loss()
-    pretrain()
+    no01_calculating_the_text_generation_loss()
+    # pretrain()
     # test()
