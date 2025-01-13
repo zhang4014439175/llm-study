@@ -46,6 +46,21 @@ def test():
     plt.tight_layout()
     plt.show()
 
+    top_k = 3
+    top_logits, top_pos = torch.topk(next_token_logits, top_k)
+    print("Top logits:", top_logits)
+    print("Top positions:", top_pos)
+
+    new_logits = torch.where(
+        condition=next_token_logits < top_logits[-1],
+        input=torch.tensor(float('-inf')),
+        other=next_token_logits
+    )
+    print(new_logits)
+
+    topk_probas = torch.softmax(new_logits, dim=0)
+    print(topk_probas)
+
 
 def softmax_with_temperature(logits, temperature):
     scaled_logits = logits / temperature
