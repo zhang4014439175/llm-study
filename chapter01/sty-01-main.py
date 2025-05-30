@@ -40,13 +40,17 @@ def split_file():
     import re
 
     # 1.print string-to-value
+    # Hello, world! How are you? \n I'm fine--thanks.
+    # ['Hello', ',', ' ', 'world', '!', ' ', 'How', ' ', 'are', ' ', 'you', '?', '\n', 'I', "'", 'm', ' ', 'fine', '--', 'thanks', '.', '']
     with open("the-verdict.txt", "r", encoding="utf-8") as f:
         raw_text = f.read()
     preprocessed = re.split(r'([,.:;?_!"()\']|--|\s)', raw_text)
+    # 生成一个新列表，包含原始列表中所有非空且已去除首尾空白的元素。
+    # 遍历 preprocessed，item.strip()移除收尾空白符，if item.strip() 代表仅仅保留非空字符串的元素
     preprocessed = [item.strip() for item in preprocessed if item.strip()]
     # print(len(preprocessed))
     # print(preprocessed[:30])
-
+    # set去重，sorted按字母顺序排列，生成一个有序的唯一词表，适用于词汇表构建或词频统计等任务。
     all_words = sorted(set(preprocessed))
     # vocab_size = len(all_words)
     # print(vocab_size)
@@ -59,6 +63,7 @@ def split_file():
             break
 
     # 3.use tokenizer class to encode or decode text
+    # 将文本去重排序后根据下标设置为字典，然后加密就是将新字符串转换为字典里下标位置
     from chapter02.simple_tokenizer_v1 import SimpleTokenizerV1
     tokenizer = SimpleTokenizerV1(vocab)
     text = """"It's the last he painted, you know," 
@@ -102,6 +107,8 @@ def split_file():
         "Hello, do you like tea? <|endoftext|> In the sunlit terraces"
         "of someunknownPlace."
     )
+
+    # 使用openai官方的加解密工具tokenizer
     integers = tokenizer.encode(text, allowed_special={"<|endoftext|>"})
     print(integers)
 
@@ -172,6 +179,9 @@ def test_dataloader():
 
     second_batch = next(data_iter)
     print(second_batch)
+    input3, target3 = next(data_iter)
+    print(input3)
+    print(target3)
 
     # how use the data loader to sample with a batch size greate than 1
     print("===========================")
@@ -185,7 +195,8 @@ def test_dataloader():
     print("\nTargets:\n", targets)
 
 
-
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    # split_file()
+    # sliding_window()
     test_dataloader()

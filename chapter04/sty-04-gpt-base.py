@@ -23,8 +23,17 @@ def gpt_base_01():
     batch = []
     txt1 = "Every effort moves you"
     txt2 = "Every day holds a"
+    # tokenizer.encode(txt1) 将文本转换为 token ID 列表。
+    # torch.tensor(...)：将列表转换为 PyTorch 张量。
+    # tokenizer 常用于 OpenAI API 或类似 GPT 模型的文本预处理。
     batch.append(torch.tensor(tokenizer.encode(txt1)))
     batch.append(torch.tensor(tokenizer.encode(txt2)))
+    # torch.stack(batch, dim=0)：将列表中的两个张量沿第 0 维度（行）堆叠，形成一个形状为 (2, n) 的张量，
+    # 其中 n 是序列的最大长度（此处为 4，因为 txt2 会被填充到与 txt1 相同的长度）
+    # txt1_ids = [1427, 1857, 2276, 13]  # "Every effort moves you"
+    # txt2_ids = [1427, 2293, 2769, 9]   # "Every day holds a"
+    # tensor([[1427, 1857, 2276,   13],
+    #         [1427, 2293, 2769,    9]])
     batch = torch.stack(batch, dim=0)
     print(batch)
 
@@ -40,10 +49,14 @@ def gpt_base_01():
     # in neural networks. If you are unfamiliar with ReLU, it simply thresholds negative inputs to 0, ensuring that a
     # layer outputs only positive values, which explains why the resulting layer output does not contain any negative
     # values.
+    # 设置随机种子保证可复现
+    # batch_example为生成的[2, 5]张量
+    # nn.Sequential定义神经网络层，输入维度为 5，输出维度为 6。添加 ReLU 激活函数（将负数置为 0，正数保持不变）。
+    # 将层按顺序组合，形成 输入 → Linear → ReLU → 输出 的流水线。
     torch.manual_seed(123)
     batch_example = torch.randn(2, 5)
     layer = nn.Sequential(nn.Linear(5, 6), nn.ReLU())
-    out = layer(batch_example)
+    out = layer(batch_example) # todo 创建神经网络向前传播
     print(out)
 
     # keepdim: keepdim=True in operations like mean or variance calculation ensures that the output tensor retains
@@ -52,16 +65,17 @@ def gpt_base_01():
     # dim: the operation reduces the tensor along the dimension specified via dim.For instance, without keepdim=True,
     # the returned mean tensor would be a two-dimensional vector [0.1324, 0.2170] instead of a 2 × 1–dimensional
     # matrix [[0.1324], [0.2170]].
-    # dim=0：沿着第一个维度（通常是批次大小维度）进行计算。如果张量形状为(N, ...)，则对每一列（即每个样本的所有特征）进行计算。
-    # dim=1：沿着第二个维度进行计算。如果张量形状为(N, C, ...)，则对每一个样本的每一个通道（或特征）的所有其他维度进行计算。
+    # dim=0：对每一列的所有行取均值，结果会减少第 0 维度的长度，沿着第一个维度（通常是批次大小维度）进行计算。如果张量形状为(N, ...)，则对每一列（即每个样本的所有特征）进行计算。
+    # dim=1：对每一行的所有列取均值，结果会减少第 1 维度的长度（从 (2, 6) 变为 (2, 1)）。沿着第二个维度进行计算。如果张量形状为(N, C, ...)，则对每一个样本的每一个通道（或特征）的所有其他维度进行计算。
     # dim=-1：沿着最后一个维度进行计算。这通常用于处理特征向量或一维数组，其中最后一个维度包含了你想要计算统计量的数据。
     # mean: 均值计算
     # var: 方差计算
     # 例子：
     #   [[0.1, 0.4],
     #   [0.2, 0.3]]
-    # 如果我们沿着行（dim=0）计算均值，不使用keepdim=True，结果将是一个一维向量：
+    # 如果我们沿着列（dim=0）计算均值，不使用keepdim=True，结果将是一个一维向量：
     #   [0.15, 0.35]
+    # 如果我们沿着行（dim=1）计算均值，结果为[0.25, 0.25]
     # 然而，如果我们使用keepdim=True，结果将是一个2x1的矩阵（二维张量）：
     #   [[0.15],
     #   [0.35]]
