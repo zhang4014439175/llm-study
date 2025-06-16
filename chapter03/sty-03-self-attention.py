@@ -11,8 +11,9 @@ def dot_products():
          [0.05, 0.80, 0.55]]  # step (x^6)
     )
 
-    # dot products
+    # dot products：点积，用来计算两个向量的相似度
     # select a query token
+    # 查询向量
     query = inputs[1]
     # storage the attention score between query token and each input token
     attn_scores_2 = torch.empty(inputs.shape[0])
@@ -20,7 +21,9 @@ def dot_products():
     for i, x_i in enumerate(inputs):
         print(x_i)
         attn_scores_2[i] = torch.dot(x_i, query)
+    # attn_scores_2 是一个长度为 6 的张量，表示查询向量（"journey"）与每个输入 token 的相似度（点积结果）。
     print(attn_scores_2)
+
 
     print("============ compute dot products ==================")
     res = 0
@@ -35,6 +38,7 @@ def dot_products():
     # 在接下来的步骤中，如图3.9所示，我们对之前计算出的每个注意力分数进行归一化处理。
     # 归一化的主要目的是获得总和为1的注意力权重。
     # 这种归一化是一种惯例，对于大型语言模型（LLM）中的解释和保持训练稳定性非常有用。以下是实现这一归一化步骤的直接方法：
+    # attn_scores_2 / attn_scores_2.sum(), 所有分数的和就成了1
     attn_weights_2_tmp = attn_scores_2 / attn_scores_2.sum()
     print("Attention weights:", attn_weights_2_tmp)
     print("Sum:", attn_weights_2_tmp.sum())
@@ -43,6 +47,7 @@ def dot_products():
     print("Attention weights:", attn_weights_2_naive)
     print("Sum:", attn_weights_2_naive.sum())
 
+    # 使用pytorch内置归一化函数
     attn_weights_2 = torch.softmax(attn_scores_2, dim=0)
     print("Attention weights:", attn_weights_2)
     print("Sum:", attn_weights_2.sum())
@@ -59,12 +64,21 @@ def dot_products():
     # 如图3.10所示：通过将嵌入的输入标记x(i)与相应的注意力权重相乘，然后将得到的向量相加，来计算上下文向量z(2)。
     # 因此，上下文向量z(2)是所有输入向量的加权和，每个输入向量都乘以其对应的注意力权重得到。
     query = inputs[1]
+    # 创建一个与查询向量形状相同的零张量
     context_vec_2 = torch.zeros(query.shape)
+    # 使用注意力权重 attn_weights_2[i] 对 x_i 进行加权，并累加到 context_vec_2
     for i, x_i in enumerate(inputs):
         print(context_vec_2)
         context_vec_2 += attn_weights_2[i] * x_i
     print(context_vec_2)
 
+
+    # ===========================================================================================
+    # ===========================================================================================
+    # ===========================================================================================
+    # ===========================================================================================
+    # 计算注意力分数
+    # 在注意力机制中，计算注意力分数（Attention Scores）是第一步，目的是衡量输入序列中不同位置之间的相关性
     attn_scores = torch.empty(6, 6)
     for i, x_i in enumerate(inputs):
         for j, x_j in enumerate(inputs):
@@ -81,6 +95,8 @@ def dot_products():
     # The context vectors are computed as a weighted sum over the inputs.
 
     # However, for loops are generally slow, and we can achieve the same results using matrix multiplication:
+    # 使用矩阵乘法 @ 一次性计算所有点积， 和上面的类似，但是比上面的算法好
+    # 计算注意力分数
     attn_scores = inputs @ inputs.T
     print(attn_scores)
 
@@ -89,13 +105,22 @@ def dot_products():
     attn_weights = torch.softmax(attn_scores, dim=-1)
     print(attn_weights)
 
+    # 验证归一化结果
     row_2_sum = sum([0.1385, 0.2379, 0.2333, 0.1240, 0.1082, 0.1581])
     print("Row 2 sum:", row_2_sum)
     print("All row sums:", attn_weights.sum(dim=-1))
 
+    # 加权求和：加权求和（Weighted Sum） 是将注意力权重与输入向量结合，生成上下文向量的核心步骤。
     all_context_vecs = attn_weights @ inputs
     print(all_context_vecs)
     print("Previous 2nd context vector:", context_vec_2)
+
+    # 1、输入准备
+    # 2、计算注意力分数
+    # 3、归一化注意力分数
+    # 4、计算上下文向量
+    # 5、验证归一化（可选）
+    # 6、缩放点积注意力
 
 
 def trainable_weights():
@@ -164,11 +189,13 @@ def trainable_weights():
     print("values.shape:", values.shape)
 
     # 这个是需要查询的字符 journey 的key，根据 query值 来进行计算注意力分数
+    # 这里面计算的是单个注意力分数
     keys_2 = keys[1]
     attn_score_22 = query_2.dot(keys_2)
     print(attn_score_22)
 
     # 所有的注意力分数,点积计算注意力分数
+    # keys.T 为转置操作，方便计算点积
     attn_scores_2 = query_2 @ keys.T
     print(attn_scores_2)
 
