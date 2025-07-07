@@ -23,6 +23,8 @@ class CausalAttention(nn.Module):
         # b是批处理大小
         # token的数量，6个单词
         # d_in是每个元素的特征维度
+        # dropout随机丢弃权重，防止过度拟合
+        # attn_scores / keys.shape[-1] ** 0.5缩小权重
         b, num_tokens, d_in = x.shape
         keys = self.W_key(x)
         # self.W_query(x)等价于x @ self.W_query.weight.T + self.W_query.bias

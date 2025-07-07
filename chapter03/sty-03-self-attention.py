@@ -25,8 +25,11 @@ def dot_products():
     print(attn_scores_2)
 
 
+    # 点积计算
+    # 向量相互乘之后得到整个空张量的点积结果
     print("============ compute dot products ==================")
     res = 0
+    print(query)
     for idx, element in enumerate(inputs[0]):
         print(inputs[0][idx])
         print(query[idx])
@@ -67,6 +70,8 @@ def dot_products():
     # 创建一个与查询向量形状相同的零张量
     context_vec_2 = torch.zeros(query.shape)
     # 使用注意力权重 attn_weights_2[i] 对 x_i 进行加权，并累加到 context_vec_2
+    # 注意力权重的作用：attn_weights_2 决定了每个输入向量对最终上下文向量的贡献程度。权重越大，对应的输入向量在加权和中占比越高。
+    # 上下文向量的意义：它是一个“总结”了所有输入向量信息的向量，但重点聚焦于那些权重较高的输入向量。可以理解为：
     for i, x_i in enumerate(inputs):
         print(context_vec_2)
         context_vec_2 += attn_weights_2[i] * x_i
@@ -97,6 +102,7 @@ def dot_products():
     # However, for loops are generally slow, and we can achieve the same results using matrix multiplication:
     # 使用矩阵乘法 @ 一次性计算所有点积， 和上面的类似，但是比上面的算法好
     # 计算注意力分数
+    # inputs.T张量进行转置，
     attn_scores = inputs @ inputs.T
     print(attn_scores)
 
@@ -200,6 +206,11 @@ def trainable_weights():
     print(attn_scores_2)
 
     # 归一化计算占比
+    # attn_scores_2 / d_k ** 0.5 防止分数差异太大Softmax 会让大分数“垄断”权重，小分数几乎被忽略。
+    # 梯度消失（小分数的梯度接近 0，模型无法学习）。
+    # 注意力分布过于“尖锐”，失去多样性。
+    # [10, 2, 1] 缩小为 [5, 1, 0.5]
+    # 权重[0.999, 0.000, 0.000] 缩小为了 [0.881, 0.077, 0.042]
     d_k = keys.shape[-1]
     attn_weights_2 = torch.softmax(attn_scores_2 / d_k ** 0.5, dim=-1)
     print(attn_weights_2)
@@ -259,12 +270,15 @@ def causal_attention():
     print(attn_weights)
 
     # create a mask where the values above the diagonal are zero
+    # torch.ones(context_length, context_length) 生成一个全一的矩形
+    # torch.tril() 提取矩形的下三角部分
     context_length = attn_scores.shape[0]
     mask_simple = torch.tril(torch.ones(context_length, context_length))
     print("========== mask_simple ===========")
     print(mask_simple)
 
     # multiply this mask with the attention weights to zero-out the values above the diagonal:
+    # 应用掩码到注意力权重
     masked_simple = attn_weights * mask_simple
     print(masked_simple)
 
@@ -317,9 +331,15 @@ def causal_attention_class():
     attn_weights = torch.softmax(masked / keys.shape[-1] ** 0.5, dim=1)
 
     # create masked
+    # dropout = torch.nn.Dropout(0.5) 和 attn_weights = dropout(attn_weights) 的作用是随机丢弃（置零）一半的注意力权重，
+    # 并在训练时对保留的权重乘以 2（保持总权重和不变）。下面用具体例子说明：
+    # torch.nn.Dropout(0.5) 会以 50% 的概率将每个权重随机置零，并对保留的权重乘以 2（因为丢弃了一半，需要放大剩余部分以保持期望值不变）。
+    # 防止过拟合：避免模型过度依赖某些特定的注意力模式（比如“总是关注第一个单词”）。
+    # 提升鲁棒性：通过随机扰动，迫使模型学习更分散的注意力分布。
+    # 类似集成学习：每次训练迭代相当于用不同的子网络训练，最后隐式地“平均”了多个模型的效果。
     torch.manual_seed(123)
     dropout = torch.nn.Dropout(0.5)
-    example = torch.ones(6, 6)
+    # example = torch.ones(6, 6)
 
     torch.manual_seed(123)
     attn_weights = dropout(attn_weights)
@@ -403,8 +423,10 @@ def mutil_head_test():
 
 if __name__ == '__main__':
     # 91页Summary
+    # dot_products()
+    causal_attention()
     # trainable_weights()
     # use_class()
     # causal_attention_class()
-    multi_head_attention()
+    # multi_head_attention()
     # mutil_head_test()
