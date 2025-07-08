@@ -18,6 +18,8 @@ def GPT_CONFIG_124M():
 
 
 def gpt_base_01():
+
+    # 1.how data flows in and out of a GPT model,
     import tiktoken
     tokenizer = tiktoken.get_encoding("gpt2")
     batch = []
@@ -37,6 +39,8 @@ def gpt_base_01():
     batch = torch.stack(batch, dim=0)
     print(batch)
 
+    # 2.Next, we initialize a new 124-million-parameter DummyGPTModel instance and feed it
+    # the tokenized batch:
     from styc_04_dummy_gpt_model import DummyGPTModel
     torch.manual_seed(123)
     model = DummyGPTModel(GPT_CONFIG_124M())
@@ -53,6 +57,9 @@ def gpt_base_01():
     # batch_example为生成的[2, 5]张量
     # nn.Sequential定义神经网络层，输入维度为 5，输出维度为 6。添加 ReLU 激活函数（将负数置为 0，正数保持不变）。
     # 将层按顺序组合，形成 输入 → Linear → ReLU → 输出 的流水线。
+    # 3.implement a neural network layer with five inputs and six outputs that we apply to two input examples:
+    # Let’s now implement layer normalization to improve the stability and efficiency of neural network training.
+    # 层归一化背后的主要思想是调整神经网络层的激活（输出），使其均值为0，方差为1，也称为单位方差。
     torch.manual_seed(123)
     batch_example = torch.randn(2, 5)
     layer = nn.Sequential(nn.Linear(5, 6), nn.ReLU())
@@ -68,6 +75,7 @@ def gpt_base_01():
     # dim=0：对每一列的所有行取均值，结果会减少第 0 维度的长度，沿着第一个维度（通常是批次大小维度）进行计算。如果张量形状为(N, ...)，则对每一列（即每个样本的所有特征）进行计算。
     # dim=1：对每一行的所有列取均值，结果会减少第 1 维度的长度（从 (2, 6) 变为 (2, 1)）。沿着第二个维度进行计算。如果张量形状为(N, C, ...)，则对每一个样本的每一个通道（或特征）的所有其他维度进行计算。
     # dim=-1：沿着最后一个维度进行计算。这通常用于处理特征向量或一维数组，其中最后一个维度包含了你想要计算统计量的数据。
+    # 使用dim=-1始终用最后一个维度进行计算，避免dim=1改为dim=2
     # mean: 均值计算
     # var: 方差计算
     # 例子：
@@ -79,13 +87,20 @@ def gpt_base_01():
     # 然而，如果我们使用keepdim=True，结果将是一个2x1的矩阵（二维张量）：
     #   [[0.15],
     #   [0.35]]
+    # 4.层归一化，将层输入的值进行归一，使数据的均值为0，方差为1，减少波动性
     mean = out.mean(dim=-1, keepdim=True)
     var = out.var(dim=-1, keepdim=True)
     print("Mean:\n", mean)
     print("Variance:\n", var)
 
+    print("============== LayerNorm =======================")
+    # 默认打印方式:
+    # tensor([1.0000e-04, 1.0000e+04])
+    # 禁用科学计数法后的打印方式:
+    # tensor([   0.0001, 10000.0000])
     torch.set_printoptions(sci_mode=False)
 
+    # 5.层归一化封装，实现层归一化
     from styc_04_dummy_gpt_model import LayerNorm
     ln = LayerNorm(emb_dim=5)
     out_ln = ln(batch_example)
@@ -95,8 +110,9 @@ def gpt_base_01():
     print("Variance:\n", var)
 
 
-def feed_forward():
-    # GELU activations
+def feed_forward_02():
+    # 层归一结束后，开始前反馈
+    # GELU activations,绘制图形
     import matplotlib.pyplot as plt
     from styc_04_dummy_gpt_model import GELU
     gelu, relu = GELU(), nn.ReLU()
@@ -113,6 +129,7 @@ def feed_forward():
     plt.tight_layout()
     plt.show()
 
+    # 前反馈由两个线性层和一个GELU激活函数组成
     from styc_04_dummy_gpt_model import FeedForward
     ffn = FeedForward(GPT_CONFIG_124M())
     x = torch.rand(2, 3, 768)
@@ -280,9 +297,9 @@ def generate_next_token():
 
 if __name__ == '__main__':
     # gpt_base_01()
-    # feed_forward()
+    feed_forward_02()
     # shortcut_connections()
     # transformer_block()
     # gpt_model_test()
     # generate_text()
-    generate_next_token()
+    # generate_next_token()
