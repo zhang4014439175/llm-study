@@ -137,7 +137,7 @@ def feed_forward_02():
     print(out.shape)
 
 
-def shortcut_connections():
+def shortcut_connections_03():
     print(torch.backends.mps.is_available())
     from styc_04_dummy_gpt_model import ExampleDeepNeuralNetwork
     layer_sizes = [3, 3, 3, 3, 3, 1]
@@ -180,7 +180,7 @@ def print_gradients(model, x):
             print(f"{name} has gradient mean of {param.grad.abs().mean().item()}")
 
 
-def transformer_block():
+def transformer_block_04():
     from styc_04_dummy_gpt_model import TransformerBlock
     torch.manual_seed(123)
     x = torch.rand(2, 4, 768)
