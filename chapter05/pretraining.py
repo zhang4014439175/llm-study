@@ -12,16 +12,28 @@ import torch
 import tiktoken
 
 
+# 上一章
 def generate_text_simple(model, idx, max_new_tokens, context_size):
     for _ in range(max_new_tokens):
+        # 1. 提取当前上下文（最后 context_size 个 token）
         idx_cond = idx[:, -context_size:]
-        with torch.no_grad():
-            logits = model(idx_cond)
 
+        # 2. 禁用梯度计算（推理阶段不需要梯度）
+        with torch.no_grad():
+            logits = model(idx_cond)  # 模型预测下一个 token 的 logits
+
+        # 3. 取最后一个时间步的 logits（只关心下一个 token 的预测）
         logits = logits[:, -1, :]
+
+        # 4. Softmax 归一化，得到概率分布
         probas = torch.softmax(logits, dim=-1)
+
+        # 5. 选择概率最高的 token ID（贪婪解码）
         idx_next = torch.argmax(probas, dim=-1, keepdim=True)
+
+        # 6. 将新 token 拼接到输入序列
         idx = torch.cat((idx, idx_next), dim=1)
+
     return idx
 
 
@@ -58,6 +70,7 @@ def get_model(seed=True):
     return model, GPT_CONFIG_124M
 
 
+# 1、本章第一步
 def init_gpt():
     model, GPT_CONFIG_124M = get_model()
 
@@ -71,7 +84,7 @@ def init_gpt():
     )
     print("Output text:\n", token_ids_to_text(token_ids, tokenizer))
 
-
+# 接下来，我们将为生成的输出计算损失度量。这种损失作为训练进度的进展和成功指标。此外，在后面的章节中，当我们微调LLM时，我们将回顾评估模型质量的其他方法。
 def no01_calculating_the_text_generation_loss():
     inputs = torch.tensor([[16833, 3626, 6100],  # ["every effort moves",
                            [40, 1107, 588]])  # "I really like"]
@@ -79,6 +92,7 @@ def no01_calculating_the_text_generation_loss():
     targets = torch.tensor([[3626, 6100, 345],  # [" effort moves you",
                             [1107, 588, 11311]])  # " really like chocolate"]
 
+    # 1、获取模型生成的结果
     model, GPT_CONFIG_124M = get_model()
     with torch.no_grad():
         logits = model(inputs)
@@ -90,23 +104,26 @@ def no01_calculating_the_text_generation_loss():
     # 3 is each rows have 3 token
     # 50257 is the embedding dimensionality
 
-    # 1、We can complete steps 3 and 4 by applying the argmax function to the probability scores to obtain the
+    # We can complete steps 3 and 4 by applying the argmax function to the probability scores to obtain the
     # corresponding token IDs:
     # 用于返回指定维度上最大值的索引。在这个上下文中，它被用来找到每个位置上概率最高的token的索引。
+    # 2、返回指定维度上的最大索引
     token_ids = torch.argmax(probas, dim=-1, keepdim=True)
     print("Token IDs:\n", token_ids)
 
     # Finally, step 5 converts the token IDs back into text:
+    # 3、输入目标文本以及最后生成文本
     tokenizer = tiktoken.get_encoding("gpt2")
     print(f"Targets batch 1: {token_ids_to_text(targets[0], tokenizer)}")
     print(f"Outputs batch 1:"
           f" {token_ids_to_text(token_ids[0].flatten(), tokenizer)}")
 
-    # 2、we can print the initial softmax probability scores corresponding to the target tokens
+    # we can print the initial softmax probability scores corresponding to the target tokens
     # 从probas中提取第0个文本样本在位置0, 1, 2上对应于targets[0]指定索引的概率值
     # 这里[0, 1, 2]是一个索引列表，指定了感兴趣的位置
     # targets[text_idx]给出了在这些位置上我们感兴趣的词汇表中的索引
     # 两个例子为了演示loss的计算
+    # 4、取出targets中文本索引的概率，effort moves you中第3626个概率,really like chocolate中，第588个概率
     text_idx = 0
     target_probas_1 = probas[text_idx, [0, 1, 2], targets[text_idx]]
     print("Text 1:", target_probas_1)
@@ -116,21 +133,24 @@ def no01_calculating_the_text_generation_loss():
     print("Text 2:", target_probas_2)
 
     # The three target token ID probabilities for each batch are
-    # Text 1: tensor([7.4541e-05, 3.1061e-05, 1.1563e-05])
-    # Text 2: tensor([1.0337e-05, 5.6776e-05, 4.7559e-06])
+    # Text 1: tensor([7.4541e-05, 3.1061e-05, 1.1563e-05])，取出来这个字符的张量
+    # Text 2: tensor([1.0337e-05, 5.6776e-05, 4.7559e-06])，取出来这个字符的张量
 
-    # 3、Calculating the loss involves several steps
+    # 5、Calculating the loss involves several steps
     # 计算损失可以知道生成的结果和预期结果平均相差多少
-    # 3.1 计算Log probabilities
-    # 3.2 Average log probability
+    # 5.1 计算Log probabilities
+    # 5.2 Average log probability
     log_probas = torch.log(torch.cat((target_probas_1, target_probas_2)))
     print(log_probas)
+    # tensor([ -9.5042, -10.3796, -11.3677, -11.4798,  -9.7764, -12.2561])
 
     avg_log_probas = torch.mean(log_probas)
     print(avg_log_probas)
+    # tensor(-10.7940)
 
     neg_avg_log_probas = avg_log_probas * -1
     print(neg_avg_log_probas)
+    # tensor(10.7940)
 
     print("Logits shape:", logits.shape)
     print("Targets shape:", targets.shape)
@@ -143,6 +163,7 @@ def no01_calculating_the_text_generation_loss():
     print(loss)
 
 
+# 计算通过训练和验证加载器返回的给定批的交叉熵损失
 def calc_loss_batch(input_batch, target_batch, model, device):
     # The transfer to a given device allows us to transfer the data to a GPU.
     input_batch = input_batch.to(device)
@@ -154,6 +175,7 @@ def calc_loss_batch(input_batch, target_batch, model, device):
     return loss
 
 
+# 计算由给定数据加载器采样的所有批处理的损失
 def calc_loss_loader(data_loader, model, device, num_batches=None):
     # Iteratives over all batches if no fixed num_batches is specified
     total_loss = 0.
@@ -196,6 +218,7 @@ def pretrain():
     # print(train_data)
     # print(val_data)
 
+    # 创建训练集和验证集各自的加载器
     from chapter01.GPTdatasetV1 import create_dataloader_v1
     torch.manual_seed(123)
     train_loader = create_dataloader_v1(
@@ -367,19 +390,19 @@ def generate_and_print_sample(model, tokenizer, device, start_context):
 
 def train_model_simple(model, train_loader, val_loader, optimizer, device, num_epochs, eval_freq, eval_iter,
                        start_context, tokenizer):
-    train_losses, val_losses, track_tokens_seen = [], [], []
+    train_losses, val_losses, track_tokens_seen = [], [], [] # Initializes lists to track losses and tokens seen
     tokens_seen, global_step = 0, -1
 
-    for epoch in range(num_epochs):
+    for epoch in range(num_epochs): # Starts the main training loop
         model.train()
         for input_batch, target_batch in train_loader:
-            optimizer.zero_grad()
+            optimizer.zero_grad()  # Resets loss gradients from the previous batch iteration
             loss = calc_loss_batch(input_batch, target_batch, model, device)
-            loss.backward()
-            optimizer.step()
+            loss.backward() # Calculates loss gradients
+            optimizer.step() # Updates model weights using loss gradients
             tokens_seen += input_batch.numel()
             global_step += 1
-            if global_step % eval_freq == 0:
+            if global_step % eval_freq == 0: # Optional evaluation step
                 train_loss, val_loss = evaluate_model(model, train_loader, val_loader, device, eval_iter)
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
@@ -388,7 +411,7 @@ def train_model_simple(model, train_loader, val_loader, optimizer, device, num_e
                       f"Train loss {train_loss:.3f}, "
                       f"Val loss {val_loss:.3f}"
                       )
-        generate_and_print_sample(model, tokenizer, device, start_context)
+        generate_and_print_sample(model, tokenizer, device, start_context) # Prints a sample text after each epoch
     return train_losses, val_losses, track_tokens_seen
 
 

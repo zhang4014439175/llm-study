@@ -240,8 +240,11 @@ def generate_text_simple(model, idx, max_new_tokens, context_size):
             logits = model(idx_cond)
 
         logits = logits[:, -1, :]
+        #  将 logits 转换为概率分布（尽管后续直接用 argmax，这一步在数学上是冗余的，但有助于理解）。
         probas = torch.softmax(logits, dim=-1)
+        # 选择概率最高的 token。
         idx_next = torch.argmax(probas, dim=-1, keepdim=True)
+        # 将新生成的 token 加入序列，继续下一轮生成。
         idx = torch.cat((idx, idx_next), dim=1)
     return idx
 
@@ -297,9 +300,9 @@ def generate_next_token():
 
 if __name__ == '__main__':
     # gpt_base_01()
-    feed_forward_02()
+    # feed_forward_02()
     # shortcut_connections()
     # transformer_block()
     # gpt_model_test()
-    # generate_text()
+    generate_text()
     # generate_next_token()
