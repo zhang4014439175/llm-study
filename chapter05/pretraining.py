@@ -262,7 +262,7 @@ def pretrain():
     torch.manual_seed(123)
     model.to(device)
     optimizer = torch.optim.AdamW(
-        model.parameters(),
+        model.parameters(),  # The .parameters() method returns all trainable weight parameters of the model.
         lr=0.0004, weight_decay=0.1
     )
     num_epochs = 10
@@ -276,6 +276,8 @@ def pretrain():
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
 
     # transferring the model back from the GPU to the CPU
+    # 我们首先将模型从GPU转移回CPU，因为使用相对较小的模型进行推理不需要GPU。
+    # 同样，训练结束后，我们将模型置于评估模式，关闭dropout等随机成分
     model.to("cpu")
     model.eval()
 
@@ -394,19 +396,19 @@ def train_model_simple(model, train_loader, val_loader, optimizer, device, num_e
     tokens_seen, global_step = 0, -1
 
     for epoch in range(num_epochs): # Starts the main training loop
-        model.train()
-        for input_batch, target_batch in train_loader:
-            optimizer.zero_grad()  # Resets loss gradients from the previous batch iteration
-            loss = calc_loss_batch(input_batch, target_batch, model, device)
-            loss.backward() # Calculates loss gradients
-            optimizer.step() # Updates model weights using loss gradients
-            tokens_seen += input_batch.numel()
-            global_step += 1
-            if global_step % eval_freq == 0: # Optional evaluation step
+        model.train() # 切换模型到训练模式
+        for input_batch, target_batch in train_loader: # 加载训练数据
+            optimizer.zero_grad()  # Resets loss gradients from the previous batch iteration # 清除梯度
+            loss = calc_loss_batch(input_batch, target_batch, model, device) # 计算当前batch的损失
+            loss.backward() # Calculates loss gradients # 反向传播计算梯度
+            optimizer.step() # Updates model weights using loss gradients # 更新模型参数
+            tokens_seen += input_batch.numel()  # 累计处理的token数
+            global_step += 1 # 更新全局步数
+            if global_step % eval_freq == 0: # Optional evaluation step # 按指定频率评估
                 train_loss, val_loss = evaluate_model(model, train_loader, val_loader, device, eval_iter)
-                train_losses.append(train_loss)
-                val_losses.append(val_loss)
-                track_tokens_seen.append(tokens_seen)
+                train_losses.append(train_loss) # 记录训练损失
+                val_losses.append(val_loss) # 记录验证损失
+                track_tokens_seen.append(tokens_seen) # 记录当前token数
                 print(f"Ep {epoch + 1} (Step {global_step:06d}): "
                       f"Train loss {train_loss:.3f}, "
                       f"Val loss {val_loss:.3f}"
@@ -417,12 +419,13 @@ def train_model_simple(model, train_loader, val_loader, optimizer, device, num_e
 
 def generate(model, idx, max_new_tokens, context_size,
              temperature=0.0, top_k=None, eos_id=None):
-    for _ in range(max_new_tokens):
+    for _ in range(max_new_tokens): # The for loop is the same as before: gets logits and only focuses on the last
+        # time step
         idx_cond = idx[:, -context_size:]
         with torch.no_grad():
             logits = model(idx_cond)
         logits = logits[:, -1, :]
-        if top_k is not None:
+        if top_k is not None: # Filters logits with top_k sampling
             top_logits, _ = torch.topk(logits, top_k)
             min_val = top_logits[:, -1]
             logits = torch.where(
@@ -430,13 +433,13 @@ def generate(model, idx, max_new_tokens, context_size,
                 torch.tensor(float('-inf')).to(logits.device),
                 logits
             )
-        if temperature > 0.0:
+        if temperature > 0.0: # Applies temperature scaling
             logits = logits / temperature
             probs = torch.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
-        else:
+        else: # Carries out greedy next-token selection as before when temperature scaling is disabled
             idx_next = torch.argmax(logits, dim=-1, keepdim=True)
-        if idx_next == eos_id:
+        if idx_next == eos_id: # Stops generating early if end-of-sequence token is encountered
             break
         idx = torch.cat((idx, idx_next), dim=1)
     return idx
@@ -459,7 +462,7 @@ def generate_test():
 
 if __name__ == '__main__':
     # init_gpt()
-    no01_calculating_the_text_generation_loss()
+    # no01_calculating_the_text_generation_loss()
     # pretrain()
     # test()
-    # generate_test()
+    generate_test()
