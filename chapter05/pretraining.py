@@ -84,6 +84,7 @@ def init_gpt():
     )
     print("Output text:\n", token_ids_to_text(token_ids, tokenizer))
 
+
 # 接下来，我们将为生成的输出计算损失度量。这种损失作为训练进度的进展和成功指标。此外，在后面的章节中，当我们微调LLM时，我们将回顾评估模型质量的其他方法。
 def no01_calculating_the_text_generation_loss():
     inputs = torch.tensor([[16833, 3626, 6100],  # ["every effort moves",
@@ -392,40 +393,40 @@ def generate_and_print_sample(model, tokenizer, device, start_context):
 
 def train_model_simple(model, train_loader, val_loader, optimizer, device, num_epochs, eval_freq, eval_iter,
                        start_context, tokenizer):
-    train_losses, val_losses, track_tokens_seen = [], [], [] # Initializes lists to track losses and tokens seen
+    train_losses, val_losses, track_tokens_seen = [], [], []  # Initializes lists to track losses and tokens seen
     tokens_seen, global_step = 0, -1
 
-    for epoch in range(num_epochs): # Starts the main training loop
-        model.train() # 切换模型到训练模式
-        for input_batch, target_batch in train_loader: # 加载训练数据
+    for epoch in range(num_epochs):  # Starts the main training loop
+        model.train()  # 切换模型到训练模式
+        for input_batch, target_batch in train_loader:  # 加载训练数据
             optimizer.zero_grad()  # Resets loss gradients from the previous batch iteration # 清除梯度
-            loss = calc_loss_batch(input_batch, target_batch, model, device) # 计算当前batch的损失
-            loss.backward() # Calculates loss gradients # 反向传播计算梯度
-            optimizer.step() # Updates model weights using loss gradients # 更新模型参数
+            loss = calc_loss_batch(input_batch, target_batch, model, device)  # 计算当前batch的损失
+            loss.backward()  # Calculates loss gradients # 反向传播计算梯度
+            optimizer.step()  # Updates model weights using loss gradients # 更新模型参数
             tokens_seen += input_batch.numel()  # 累计处理的token数
-            global_step += 1 # 更新全局步数
-            if global_step % eval_freq == 0: # Optional evaluation step # 按指定频率评估
+            global_step += 1  # 更新全局步数
+            if global_step % eval_freq == 0:  # Optional evaluation step # 按指定频率评估
                 train_loss, val_loss = evaluate_model(model, train_loader, val_loader, device, eval_iter)
-                train_losses.append(train_loss) # 记录训练损失
-                val_losses.append(val_loss) # 记录验证损失
-                track_tokens_seen.append(tokens_seen) # 记录当前token数
+                train_losses.append(train_loss)  # 记录训练损失
+                val_losses.append(val_loss)  # 记录验证损失
+                track_tokens_seen.append(tokens_seen)  # 记录当前token数
                 print(f"Ep {epoch + 1} (Step {global_step:06d}): "
                       f"Train loss {train_loss:.3f}, "
                       f"Val loss {val_loss:.3f}"
                       )
-        generate_and_print_sample(model, tokenizer, device, start_context) # Prints a sample text after each epoch
+        generate_and_print_sample(model, tokenizer, device, start_context)  # Prints a sample text after each epoch
     return train_losses, val_losses, track_tokens_seen
 
 
 def generate(model, idx, max_new_tokens, context_size,
              temperature=0.0, top_k=None, eos_id=None):
-    for _ in range(max_new_tokens): # The for loop is the same as before: gets logits and only focuses on the last
+    for _ in range(max_new_tokens):  # The for loop is the same as before: gets logits and only focuses on the last
         # time step
         idx_cond = idx[:, -context_size:]
         with torch.no_grad():
             logits = model(idx_cond)
         logits = logits[:, -1, :]
-        if top_k is not None: # Filters logits with top_k sampling
+        if top_k is not None:  # Filters logits with top_k sampling
             top_logits, _ = torch.topk(logits, top_k)
             min_val = top_logits[:, -1]
             logits = torch.where(
@@ -433,13 +434,13 @@ def generate(model, idx, max_new_tokens, context_size,
                 torch.tensor(float('-inf')).to(logits.device),
                 logits
             )
-        if temperature > 0.0: # Applies temperature scaling
+        if temperature > 0.0:  # Applies temperature scaling
             logits = logits / temperature
             probs = torch.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
-        else: # Carries out greedy next-token selection as before when temperature scaling is disabled
+        else:  # Carries out greedy next-token selection as before when temperature scaling is disabled
             idx_next = torch.argmax(logits, dim=-1, keepdim=True)
-        if idx_next == eos_id: # Stops generating early if end-of-sequence token is encountered
+        if idx_next == eos_id:  # Stops generating early if end-of-sequence token is encountered
             break
         idx = torch.cat((idx, idx_next), dim=1)
     return idx
@@ -466,3 +467,24 @@ if __name__ == '__main__':
     # pretrain()
     # test()
     generate_test()
+
+# When LLMs generate text, they output one token at a time.
+#  By default, the next token is generated by converting the model outputs into
+# probability scores and selecting the token from the vocabulary that corresponds
+# to the highest probability score, which is known as “greedy decoding.”
+#  Using probabilistic sampling and temperature scaling, we can influence the
+# diversity and coherence of the generated text.
+#  Training and validation set losses can be used to gauge the quality of text generated by LLM during training.
+# Pretraining an LLM involves changing its weights to minimize the training loss.
+#  The training loop for LLMs itself is a standard procedure in deep learning,
+# using a conventional cross entropy loss and AdamW optimizer.
+#  Pretraining an LLM on a large text corpus is time- and resource-intensive, so we
+# can load openly available weights as an alternative to pretraining the model on
+# a large dataset ourselves.
+
+# Exercise 5.5
+# Calculate the training and validation set losses of the GPTModel with the pretrained
+# weights from OpenAI on the “The Verdict” dataset.
+
+# Exercise 5.6 Experiment with GPT-2 models of different sizes—for example, the largest 1,558 million parameter
+# model—and compare the generated text to the 124 million model.
