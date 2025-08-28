@@ -167,9 +167,20 @@ def no01_calculating_the_text_generation_loss():
 # 计算通过训练和验证加载器返回的给定批的交叉熵损失
 def calc_loss_batch(input_batch, target_batch, model, device):
     # The transfer to a given device allows us to transfer the data to a GPU.
-    input_batch = input_batch.to(device)
-    target_batch = target_batch.to(device)
-    logits = model(input_batch)
+    input_batch = input_batch.to(device) # 将输入数据转移到GPU/CPU
+    target_batch = target_batch.to(device) # 将标签转移到同一设备
+    logits = model(input_batch) # 模型输出未归一化的预测值
+    # logits.flatten(0, 1) 合并前两维：(batch_size, seq_len, num_classes) → (batch_size*seq_len, num_classes)
+    # target_batch.flatten() 展平标签：(batch_size, seq_len) → (batch_size*seq_len,)
+    # 为什么需要展平？
+    # 交叉熵损失要求 logits 形状为 (N, C)（N 是样本数，C 是类别数）。
+    # 标签形状需为 (N,)（每个样本的类别索引，非 one-hot）。
+    # 如果任务是序列标注（如每个 token 分类），需将 batch_size 和 seq_len 合并为一个维度。
+    # 输入数据 (input_batch) → 模型 (model) → logits (未归一化预测)
+    #   ↓
+    # 展平 logits 和标签 → 交叉熵损失计算 → 损失值 (loss)
+    #   ↓
+    # 反向传播 (loss.backward()) → 优化器更新参数 (optimizer.step())
     loss = torch.nn.functional.cross_entropy(
         logits.flatten(0, 1), target_batch.flatten()
     )

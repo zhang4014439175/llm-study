@@ -5,6 +5,7 @@ from pathlib import Path
 
 import torch
 
+from chapter06.finetuning_02_calc_accuracy import calc_accuracy_loader, calc_loss_loader
 from chapter06.finetuning_struct import SpamDataset
 
 url = "https://archive.ics.uci.edu/static/public/228/sms+spam+collection.zip"
@@ -134,6 +135,8 @@ def tokenizer_padding_tokens():
     print(f"{len(val_loader)} validation batches")
     print(f"{len(test_loader)} test batches")
 
+    return train_loader, val_loader, test_loader
+
 
 def initializing_model_with_pretrained_weights():
     CHOOSE_MODEL = "gpt2-small (124M)"
@@ -239,6 +242,46 @@ def initializing_model_with_pretrained_weights():
     print("Outputs:\n", outputs)
     print("Outputs dimensions:", outputs.shape)
     print("Last output token:", outputs[:, -1, :])
+
+    # We can obtain the class label:
+    # probas = torch.softmax(outputs[:, -1, :], dim=-1)
+    # label = torch.argmax(probas)
+    # print("Class label:", label.item())
+
+    # 在本例中，代码返回1，这意味着模型预测输入文本是“垃圾”。这里使用softmax函数是可选的，因为最大的输出直接对应于最高的概率分数。
+    # 因此，我们可以简化代码而不使用softmax：
+    # 生成任务使用概率化，可以使用概率高的以及相对高的，分类任务是必须使用概率高的所以就没必要将概率归一化处理了
+    logits = outputs[:, -1, :]
+    label = torch.argmax(logits)
+    print("Class label:", label.item())
+
+    train_loader, val_loader, test_loader = tokenizer_padding_tokens()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    torch.manual_seed(123)
+    train_accuracy = calc_accuracy_loader(
+        train_loader, model, device, num_batches=10
+    )
+    val_accuracy = calc_accuracy_loader(
+        val_loader, model, device, num_batches=10
+    )
+    test_accuracy = calc_accuracy_loader(
+        test_loader, model, device, num_batches=10
+    )
+    print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+    print(f"Validation accuracy: {val_accuracy * 100:.2f}%")
+    print(f"Test accuracy: {test_accuracy * 100:.2f}%")
+
+    # 与计算训练精度类似，我们现在计算每个数据集的初始损失：
+    with torch.no_grad():
+        train_loss = calc_loss_loader(
+            train_loader, model, device, num_batches=5
+        )
+        val_loss = calc_loss_loader(val_loader, model, device, num_batches=5)
+        test_loss = calc_loss_loader(test_loader, model, device, num_batches=5)
+    print(f"Training loss: {train_loss:.3f}")
+    print(f"Validation loss: {val_loss:.3f}")
+    print(f"Test loss: {test_loss:.3f}")
 
 if __name__ == '__main__':
     print("start")
