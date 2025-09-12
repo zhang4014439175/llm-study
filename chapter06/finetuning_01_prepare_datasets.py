@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 
 from chapter06.finetuning_02_calc_accuracy import calc_accuracy_loader, calc_loss_loader
+from chapter06.finetuning_03_classify_spam import train_classifier_simple, plot_values
 from chapter06.finetuning_struct import SpamDataset
 
 url = "https://archive.ics.uci.edu/static/public/228/sms+spam+collection.zip"
@@ -203,7 +204,6 @@ def initializing_model_with_pretrained_weights():
     #     context_size=BASE_CONFIG["context_length"]
     # )
 
-
     # token_ids = generate(
     #     model=model,
     #     idx=text_to_token_ids(text_2, tokenizer),
@@ -282,6 +282,35 @@ def initializing_model_with_pretrained_weights():
     print(f"Training loss: {train_loss:.3f}")
     print(f"Validation loss: {val_loss:.3f}")
     print(f"Test loss: {test_loss:.3f}")
+
+    import time
+    start_time = time.time()
+    torch.manual_seed(123)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.1)
+    num_epochs = 5
+    train_losses, val_losses, train_accs, val_accs, examples_seen = \
+        train_classifier_simple(
+            model, train_loader, val_loader, optimizer, device,
+            num_epochs=num_epochs, eval_freq=50,
+            eval_iter=5
+        )
+    end_time = time.time()
+    execution_time_minutes = (end_time - start_time) / 60
+    print(f"Training completed in {execution_time_minutes:.2f} minutes.")
+
+    # 绘制分类损失 Plotting the classification loss
+    epochs_tensor = torch.linspace(0, num_epochs, len(train_losses))
+    examples_seen_tensor = torch.linspace(0, examples_seen, len(train_losses))
+    plot_values(epochs_tensor, examples_seen_tensor, train_losses, val_losses)
+
+    # 使用相同的plot_values函数，现在让我们绘制分类精度：
+    epochs_tensor = torch.linspace(0, num_epochs, len(train_accs))
+    examples_seen_tensor = torch.linspace(0, examples_seen, len(train_accs))
+    plot_values(
+        epochs_tensor, examples_seen_tensor, train_accs, val_accs,
+        label="accuracy"
+    )
+
 
 if __name__ == '__main__':
     print("start")

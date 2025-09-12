@@ -27,7 +27,7 @@ def calc_accuracy_loader(data_loader, model, device, num_batches=None):
 def calc_loss_batch(input_batch, target_batch, model, device):
     input_batch = input_batch.to(device)
     target_batch = target_batch.to(device)
-    logits = model(input_batch)[:, -1, :]
+    logits = model(input_batch)[:, -1, :] # model(input_batch) 执行前向传播，生成原始输出（logits），未经过softmax激活（交叉熵损失函数内部会集成softmax）。
     loss = torch.nn.functional.cross_entropy(logits, target_batch)
     return loss
 
