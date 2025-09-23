@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 
 from chapter06.finetuning_02_calc_accuracy import calc_accuracy_loader, calc_loss_loader
-from chapter06.finetuning_03_classify_spam import train_classifier_simple, plot_values
+from chapter06.finetuning_03_classify_spam import train_classifier_simple, plot_values, classify_review
 from chapter06.finetuning_struct import SpamDataset
 
 url = "https://archive.ics.uci.edu/static/public/228/sms+spam+collection.zip"
@@ -310,6 +310,38 @@ def initializing_model_with_pretrained_weights():
         epochs_tensor, examples_seen_tensor, train_accs, val_accs,
         label="accuracy"
     )
+
+    train_accuracy = calc_accuracy_loader(train_loader, model, device)
+    val_accuracy = calc_accuracy_loader(val_loader, model, device)
+    test_accuracy = calc_accuracy_loader(test_loader, model, device)
+    print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+    print(f"Validation accuracy: {val_accuracy * 100:.2f}%")
+    print(f"Test accuracy: {test_accuracy * 100:.2f}%")
+
+    train_dataset = SpamDataset(
+        csv_file="train.csv",
+        max_length=None,
+        tokenizer=tokenizer
+    )
+    text_1 = (
+        "You are a winner you have been specially"
+        " selected to receive $1000 cash or a $2000 award."
+    )
+    print(classify_review(
+        text_1, model, tokenizer, device, max_length=train_dataset.max_length
+    ))
+
+    text_2 = (
+        "Hey, just wanted to check if we're still on"
+        " for dinner tonight? Let me know!"
+    )
+    print(classify_review(
+        text_2, model, tokenizer, device, max_length=train_dataset.max_length
+    ))
+    torch.save(model.state_dict(), "review_classifier.pth")
+
+    # model_state_dict = torch.load("review_classifier.pth, map_location=device")
+    # model.load_state_dict(model_state_dict)
 
 
 if __name__ == '__main__':
