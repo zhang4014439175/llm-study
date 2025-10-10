@@ -3,8 +3,12 @@ import os
 import urllib
 from urllib.request import urlopen
 
+import torch
+
+from chapter05.pretraining import generate, text_to_token_ids, token_ids_to_text
 from chapter07.instruction_finetuning_01_mian_instruction_dataset_class import custom_collate_draft_1, format_input, \
-    custom_collate_draft_2, custom_collate_fn
+    custom_collate_draft_2, custom_collate_fn, get_data_loaders
+from chapter07.instruction_finetuning_03_loading_llm import loading_llm
 
 
 def download_and_load_file(file_path, url):
@@ -77,9 +81,9 @@ def test():
     inputs_2 = [5, 6]
     inputs_3 = [7, 8, 9]
     batch = (
-     inputs_1,
-     inputs_2,
-     inputs_3
+        inputs_1,
+        inputs_2,
+        inputs_3
     )
     print(custom_collate_draft_1(batch))
     inputs, targets = custom_collate_draft_2(batch)
@@ -89,6 +93,27 @@ def test():
     inputs, targets = custom_collate_fn(batch)
     print(inputs)
     print(targets)
+
+    train_loader, val_loader, test_loader = get_data_loaders(train_data, val_data, test_data)
+    print("Train loader:")
+    for inputs, targets in train_loader:
+        print(inputs.shape, targets.shape)
+
+    torch.manual_seed(123)
+    input_text = format_input(val_data[0])
+    print(input_text)
+
+    model, BASE_CONFIG = loading_llm()
+    token_ids = generate(
+        model=model,
+        idx=text_to_token_ids(input_text, tokenizer),
+        max_new_tokens=35,
+        context_size=BASE_CONFIG["context_length"],
+        eos_id=50256,
+    )
+    generated_text = token_ids_to_text(token_ids, tokenizer)
+    response_text = generated_text[len(input_text):].strip()
+    print(response_text)
 
 
 if __name__ == '__main__':
