@@ -120,12 +120,12 @@ def custom_collate_fn(
     return inputs_tensor, targets_tensor
 
 
-def get_data_loaders(train_data, val_data, test_data):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def get_data_loaders(train_data, val_data, test_data, tokenizer, device):
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     from functools import partial
     import tiktoken
-    tokenizer = tiktoken.get_encoding("gpt2")
+    # tokenizer = tiktoken.get_encoding("gpt2")
     customized_collate_fn = partial(
         custom_collate_fn,
         device=device,
