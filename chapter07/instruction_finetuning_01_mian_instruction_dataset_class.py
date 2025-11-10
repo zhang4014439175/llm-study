@@ -2,6 +2,9 @@ from torch.utils.data import Dataset
 import torch
 
 
+# # 目的：ensure our model receives the formatted training data during the fine-tuning process. A collate function is
+# responsible for taking a list of individual data samples and merging them into a single batch that can be
+# processed efficiently by the model during training.
 def format_input(entry):
     instruction_text = (
         f"Below is an instruction that describes a task. "
@@ -35,6 +38,10 @@ class InstructionDataset(Dataset):
         return len(self.data)
 
 
+# 填充为等长数据
+# tensor([[ 0, 1, 2, 3, 4],
+#  [ 5, 6, 50256, 50256, 50256],
+#  [ 7, 8, 9, 50256, 50256]])
 def custom_collate_draft_1(
         batch,
         pad_token_id=50256,
@@ -56,6 +63,12 @@ def custom_collate_draft_1(
     return inputs_tensor
 
 
+# tensor([[ 0, 1, 2, 3, 4],
+#  [ 5, 6, 50256, 50256, 50256],
+#  [ 7, 8, 9, 50256, 50256]])
+# tensor([[ 1, 2, 3, 4, 50256],
+#  [ 6, 50256, 50256, 50256, 50256],
+#  [ 8, 9, 50256, 50256, 50256]])
 def custom_collate_draft_2(
         batch,
         pad_token_id=50256,
@@ -109,6 +122,7 @@ def custom_collate_fn(
         if indices.numel() > 1:
             targets[indices[1:]] = ignore_index
 
+        # 限制长度，防止显存爆炸
         # Optionally truncates to the maximum sequence length
         if allowed_max_length is not None:
             inputs = inputs[:allowed_max_length]

@@ -4,7 +4,7 @@ import urllib
 from urllib.request import urlopen
 
 import torch
-
+import tiktoken
 from chapter05.pretraining import generate, text_to_token_ids, token_ids_to_text, calc_loss_loader
 from chapter07.instruction_finetuning_01_mian_instruction_dataset_class import custom_collate_draft_1, format_input, \
     custom_collate_draft_2, custom_collate_fn, get_data_loaders
@@ -72,20 +72,19 @@ def test():
     print("Validation set length:", len(val_data))
 
     # 加载模型参数
-    import tiktoken
     tokenizer = tiktoken.get_encoding("gpt2")
     print(tokenizer.encode("<|endoftext|>", allowed_special={"<|endoftext|>"}))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # 测试填充效果
-    # inputs_1 = [0, 1, 2, 3, 4]
-    # inputs_2 = [5, 6]
-    # inputs_3 = [7, 8, 9]
-    # batch = (
-    #     inputs_1,
-    #     inputs_2,
-    #     inputs_3
-    # )
-    # print(custom_collate_draft_1(batch))
+    inputs_1 = [0, 1, 2, 3, 4]
+    inputs_2 = [5, 6]
+    inputs_3 = [7, 8, 9]
+    batch = (
+        inputs_1,
+        inputs_2,
+        inputs_3
+    )
+    print(custom_collate_draft_1(batch))
     # inputs, targets = custom_collate_draft_2(batch)
     # print(inputs)
     # print(targets)

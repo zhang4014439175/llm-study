@@ -8,9 +8,10 @@ import tiktoken
 import torch
 
 from chapter04.styc_04_dummy_gpt_model import GPTModel
+from chapter05.calculate_loss import calc_loss_loader
 from chapter05.gpt_download import download_and_load_gpt2
 from chapter05.openai import load_weights_into_gpt
-from chapter05.pretraining import generate, text_to_token_ids, token_ids_to_text, calc_loss_loader, train_model_simple, \
+from chapter05.pretraining import generate, text_to_token_ids, token_ids_to_text, train_model_simple, \
     plot_losses
 from chapter07.instruction_finetuning_01_mian_instruction_dataset_class import InstructionDataset, custom_collate_fn, \
     format_input
@@ -52,6 +53,7 @@ def test():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device:", device)
 
+    # 处理批数据方法
     customized_collate_fn = partial(
         custom_collate_fn,
         device=device,
@@ -106,8 +108,8 @@ def test():
         "gpt2-large (774M)": {"emb_dim": 1280, "n_layers": 36, "n_heads": 20},
         "gpt2-xl (1558M)": {"emb_dim": 1600, "n_layers": 48, "n_heads": 25},
     }
-    CHOOSE_MODEL = "gpt2-small (124M)"
-    # CHOOSE_MODEL = "gpt2-medium (355M)"
+    # CHOOSE_MODEL = "gpt2-small (124M)"
+    CHOOSE_MODEL = "gpt2-medium (355M)"
     BASE_CONFIG.update(model_configs[CHOOSE_MODEL])
     model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
     settings, params = download_and_load_gpt2(

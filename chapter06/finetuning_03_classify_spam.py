@@ -1,6 +1,7 @@
 import torch
 
 from chapter06.finetuning_02_calc_accuracy import calc_loss_loader, calc_accuracy_loader, calc_loss_batch
+import matplotlib.pyplot as plt
 
 
 def train_classifier_simple(
@@ -68,9 +69,6 @@ def evaluate_model(model, train_loader, val_loader, device, eval_iter):
         )
     model.train()
     return train_loss, val_loss
-
-
-import matplotlib.pyplot as plt
 
 
 # 然后我们使用Matplotlib绘制训练和验证集的损失函数。
