@@ -7,14 +7,14 @@
 # 3.Saving and loading model weights to continue
 # training an LLM
 # 4.Loading pretrained weights from OpenAI
-# import matplotlib
+import matplotlib
 import torch
 
 import tiktoken
 
 from chapter05.get_device import get_torch_device
 
-# matplotlib.use("Agg")
+matplotlib.use("Agg")
 
 
 # 上一章

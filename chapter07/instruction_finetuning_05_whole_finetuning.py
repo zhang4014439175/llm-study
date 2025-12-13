@@ -131,8 +131,8 @@ def test():
     # 下载并加载 GPT-2 预训练权重
     settings, params = download_and_load_gpt2(
         model_size=model_size,
-        # models_dir="/Users/zhangzhiming/PycharmProjects/llm-study/chapter05/gpt2"
-        models_dir="E:\PythonProject\study\llm-study\chapter07\gpt2"
+        models_dir="/Users/zhangzhiming/PycharmProjects/llm-study/chapter05/gpt2"
+        # models_dir="E:\PythonProject\study\llm-study\chapter07\gpt2"
     )
     
     # 初始化模型并加载权重
