@@ -7,9 +7,14 @@
 # 3.Saving and loading model weights to continue
 # training an LLM
 # 4.Loading pretrained weights from OpenAI
+# import matplotlib
 import torch
 
 import tiktoken
+
+from chapter05.get_device import get_torch_device
+
+# matplotlib.use("Agg")
 
 
 # 上一章
@@ -167,9 +172,9 @@ def no01_calculating_the_text_generation_loss():
 # 计算通过训练和验证加载器返回的给定批的交叉熵损失
 def calc_loss_batch(input_batch, target_batch, model, device):
     # The transfer to a given device allows us to transfer the data to a GPU.
-    input_batch = input_batch.to(device) # 将输入数据转移到GPU/CPU
-    target_batch = target_batch.to(device) # 将标签转移到同一设备
-    logits = model(input_batch) # 模型输出未归一化的预测值
+    input_batch = input_batch.to(device)  # 将输入数据转移到GPU/CPU
+    target_batch = target_batch.to(device)  # 将标签转移到同一设备
+    logits = model(input_batch)  # 模型输出未归一化的预测值
     # logits.flatten(0, 1) 合并前两维：(batch_size, seq_len, num_classes) → (batch_size*seq_len, num_classes)
     # target_batch.flatten() 展平标签：(batch_size, seq_len) → (batch_size*seq_len,)
     # 为什么需要展平？
@@ -211,6 +216,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
 
 
 def pretrain():
+    # 预训练步骤1：准备数据。加载文本文件，并进行字符和Token的统计。
     file_path = "../chapter01/the-verdict.txt"
     with open(file_path, "r", encoding="utf-8") as file:
         text_data = file.read()
@@ -222,6 +228,7 @@ def pretrain():
     print("Characters:", total_characters)
     print("Tokens:", total_tokens)
 
+    # 预训练步骤2：划分数据集。将数据划分为90%的训练集和10%的验证集。
     # 划分训练集和验证集的比重为 90% 和 10%
     train_ratio = 0.90
     split_idx = int(train_ratio * len(text_data))
@@ -230,6 +237,7 @@ def pretrain():
     # print(train_data)
     # print(val_data)
 
+    # 预训练步骤3：创建数据加载器。使用sliding window（滑动窗口）方法创建训练和验证的DataLoader。
     # 创建训练集和验证集各自的加载器
     from chapter01.GPTdatasetV1 import create_dataloader_v1
     torch.manual_seed(123)
@@ -258,7 +266,9 @@ def pretrain():
     # for x, y in val_loader:
     #     print(x.shape, y.shape)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 预训练步骤4：计算初始损失。在未训练前计算模型在训练集和验证集上的损失，作为对比基准。
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_torch_device()
     # If you have a machine with a CUDA-supported GPU, the LLM will train on the GPU without making any changes to
     # the code.
     model.to(device)
@@ -272,26 +282,30 @@ def pretrain():
 
     # train start
     torch.manual_seed(123)
-    model.to(device)
+    # 预训练步骤5：配置优化器。初始化AdamW优化器，设置学习率和权重衰减。
+    # model.to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),  # The .parameters() method returns all trainable weight parameters of the model.
         lr=0.0004, weight_decay=0.1
     )
     num_epochs = 10
+    # 预训练步骤6：执行训练。运行训练循环，包含前向传播、计算损失、反向传播和参数更新。
     train_losses, val_losses, tokens_seen = train_model_simple(
         model, train_loader, val_loader, optimizer, device,
         num_epochs=num_epochs, eval_freq=5, eval_iter=5,
         start_context="Every effort moves you", tokenizer=tokenizer
     )
 
+    # 预训练步骤7：结果可视化。绘制训练和验证过程中的损失曲线。
     epochs_tensor = torch.linspace(0, num_epochs, len(train_losses))
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
 
     # transferring the model back from the GPU to the CPU
     # 我们首先将模型从GPU转移回CPU，因为使用相对较小的模型进行推理不需要GPU。
     # 同样，训练结束后，我们将模型置于评估模式，关闭dropout等随机成分
-    model.to("cpu")
-    model.eval()
+    # 预训练步骤8：模型评估。使用训练好的模型生成文本，检查其生成能力。
+    # model.to("cpu")
+    # model.eval()
 
     tokenizer = tiktoken.get_encoding("gpt2")
     token_ids = generate_text_simple(
@@ -313,14 +327,22 @@ def pretrain():
     )
     print("Output text:\n", token_ids_to_text(token_ids, tokenizer))
 
-    from chapter04.styc_04_dummy_gpt_model import GPTModel
-    model = GPTModel(GPT_CONFIG_124M)
-    model.load_state_dict(torch.load("model.pth", map_location=device))
+    #
+    # model = GPTModel(GPT_CONFIG_124M)
+    # model.load_state_dict(torch.load("model.pth", map_location=device))
     # Using model.eval() switches the model to evaluation mode
     # for inference, disabling the dropout layers of the model
-    model.eval()
+    # model.eval()
 
     # 保存模型信息
+    # 预训练步骤9：保存模型。保存模型权重和优化器状态，以便后续恢复训练或推理。
+    # ===== training finished =====
+    model.eval()
+
+    # 保存推理模型
+    torch.save(model.state_dict(), "model.pth")
+
+    # 保存训练快照
     torch.save({
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
@@ -330,6 +352,7 @@ def pretrain():
 
     # 加载模型信息，
     checkpoint = torch.load("model_and_optimizer.pth", map_location=device)
+    from chapter04.styc_04_dummy_gpt_model import GPTModel
     model = GPTModel(GPT_CONFIG_124M)
     model.load_state_dict(checkpoint["model_state_dict"])
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=0.1)
@@ -472,12 +495,22 @@ def generate_test():
     print("Output text:\n", token_ids_to_text(token_ids, tokenizer))
 
 
+# 总体注释：
+# 本模块主要实现了GPT模型的预训练流程。主要包含以下步骤：
+# 1. 准备数据：加载文本数据，统计字符和Token数量，并按比例划分为训练集和验证集。
+# 2. 创建加载器：利用滑动窗口机制构建训练集和验证集的DataLoader。
+# 3. 初始化模型：构建GPT模型实例，并将其移动到计算设备（CPU/GPU）。
+# 4. 初始评估：在训练开始前计算模型在训练集和验证集上的初始损失。
+# 5. 配置训练：初始化AdamW优化器，设置训练参数（如epoch数）。
+# 6. 执行训练：运行训练循环，执行前向传播、损失计算、反向传播和参数更新，并定期评估模型。
+# 7. 可视化与评估：绘制损失变化曲线，并使用训练后的模型生成文本以直观评估效果。
+# 8. 模型保存：保存训练好的模型权重和优化器状态，支持后续的加载和继续训练。
 if __name__ == '__main__':
     # init_gpt()
     # no01_calculating_the_text_generation_loss()
-    # pretrain()
+    pretrain()
     # test()
-    generate_test()
+    # generate_test()
 
 # When LLMs generate text, they output one token at a time.
 #  By default, the next token is generated by converting the model outputs into

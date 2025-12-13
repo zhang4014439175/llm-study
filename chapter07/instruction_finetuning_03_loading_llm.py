@@ -24,8 +24,8 @@ def loading_llm():
     model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
     settings, params = download_and_load_gpt2(
         model_size=model_size,
-        models_dir="E:\PythonProject\study\llm-study\chapter05\gpt2"
-        # models_dir="E:\PythonProject\study\llm-study\chapter07\gpt2"
+        # models_dir="/Users/zhangzhiming/PycharmProjects/llm-study/chapter05/gpt2"
+        models_dir="E:\PythonProject\study\llm-study\chapter07\gpt2"
     )
     model = GPTModel(BASE_CONFIG)
     load_weights_into_gpt(model, params)

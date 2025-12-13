@@ -3,10 +3,12 @@ import os
 import time
 from functools import partial
 
+# 导入必要的库
 import requests
 import tiktoken
 import torch
 
+# 导入自定义模块
 from chapter04.styc_04_dummy_gpt_model import GPTModel
 from chapter05.calculate_loss import calc_loss_loader
 from chapter05.gpt_download import download_and_load_gpt2
@@ -24,6 +26,7 @@ def test():
         "/main/ch07/01_main-chapter-code/instruction-data.json"
     )
 
+    # 如果文件不存在，则从 GitHub 下载
     if not os.path.exists(file_path):
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -31,14 +34,16 @@ def test():
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(text_data)
 
+    # 读取 JSON 数据
     with open(file_path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
-    # 设置数据比例 partitioned the dataset
+    # 设置数据划分比例：85% 训练，10% 测试，5% 验证
     train_portion = int(len(data) * 0.85)  # 85% for training
     test_portion = int(len(data) * 0.1)  # 10% for testing
     val_portion = len(data) - train_portion - test_portion  # Remaining 5% for validation
 
+    # 划分数据集
     train_data = data[:train_portion]
     test_data = data[train_portion:train_portion + test_portion]
     val_data = data[train_portion + test_portion:]
@@ -48,12 +53,15 @@ def test():
     print("Test set length:", len(test_data))
 
     # 加载模型参数
+    # 初始化 tokenizer
     tokenizer = tiktoken.get_encoding("gpt2")
     # print(tokenizer.encode("<|endoftext|>", allowed_special={"<|endoftext|>"}))
+    
+    # 设置设备 (GPU 或 CPU)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device:", device)
 
-    # 处理批数据方法
+    # 自定义 collate_fn，用于 batch 数据处理
     customized_collate_fn = partial(
         custom_collate_fn,
         device=device,
@@ -64,6 +72,8 @@ def test():
     num_workers = 0
     batch_size = 8
     torch.manual_seed(123)
+
+    # 创建训练集 DataLoader
     train_dataset = InstructionDataset(train_data, tokenizer)
     train_loader = DataLoader(
         train_dataset,
@@ -73,6 +83,8 @@ def test():
         drop_last=True,
         num_workers=num_workers
     )
+
+    # 创建验证集 DataLoader
     val_dataset = InstructionDataset(val_data, tokenizer)
     val_loader = DataLoader(
         val_dataset,
@@ -82,6 +94,8 @@ def test():
         drop_last=False,
         num_workers=num_workers
     )
+
+    # 创建测试集 DataLoader
     test_dataset = InstructionDataset(test_data, tokenizer)
     test_loader = DataLoader(
         test_dataset,
@@ -96,6 +110,7 @@ def test():
     for inputs, targets in train_loader:
         print(inputs.shape, targets.shape)
 
+    # 基础模型配置
     BASE_CONFIG = {
         "vocab_size": 50257,  # Vocabulary size
         "context_length": 1024,  # Context length
@@ -112,15 +127,21 @@ def test():
     CHOOSE_MODEL = "gpt2-medium (355M)"
     BASE_CONFIG.update(model_configs[CHOOSE_MODEL])
     model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
+
+    # 下载并加载 GPT-2 预训练权重
     settings, params = download_and_load_gpt2(
         model_size=model_size,
-        models_dir="E:\PythonProject\study\llm-study\chapter05\gpt2"
-        # models_dir="E:\PythonProject\study\llm-study\chapter07\gpt2"
+        # models_dir="/Users/zhangzhiming/PycharmProjects/llm-study/chapter05/gpt2"
+        models_dir="E:\PythonProject\study\llm-study\chapter07\gpt2"
     )
+    
+    # 初始化模型并加载权重
     model = GPTModel(BASE_CONFIG)
     load_weights_into_gpt(model, params)
     model.eval()
 
+    # == 微调前测试 ==
+    # 测试一条数据，看看微调前的模型表现
     torch.manual_seed(123)
     input_text = format_input(val_data[0])
     print(input_text)
@@ -145,6 +166,8 @@ def test():
 
     model.to(device)
     torch.manual_seed(123)
+    
+    # 计算初始 loss
     with torch.no_grad():
         train_loss = calc_loss_loader(train_loader, model, device, num_batches=5)
         val_loss = calc_loss_loader(val_loader, model, device, num_batches=5)
@@ -153,12 +176,16 @@ def test():
 
     print("============== before start train ==============")
 
+    # 开始训练
     start_time = time.time()
     torch.manual_seed(123)
+    # 使用 AdamW 优化器
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=0.00005, weight_decay=0.1
     )
     num_epochs = 2
+    
+    # 调用简单的训练循环
     train_losses, val_losses, tokens_seen = train_model_simple(
         model, train_loader, val_loader, optimizer, device,
         num_epochs=num_epochs, eval_freq=5, eval_iter=5,
@@ -168,10 +195,12 @@ def test():
     execution_time_minutes = (end_time - start_time) / 60
     print(f"Training completed in {execution_time_minutes:.2f} minutes.")
 
+    # 绘制 Loss 曲线
     epochs_tensor = torch.linspace(0, num_epochs, len(train_losses))
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
 
     # evaluate
+    # 在测试集前 3 个样本上进行评估
     torch.manual_seed(123)
     for entry in test_data[:3]:
         input_text = format_input(entry)
@@ -196,6 +225,7 @@ def test():
         print("-------------------------------------")
 
     # 7.9 Generating test set responses
+    # 为所有测试集数据生成回复并保存
     from tqdm import tqdm
     for i, entry in tqdm(enumerate(test_data), total=len(test_data)):
         input_text = format_input(entry)
@@ -219,4 +249,5 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    # test()
+    torch.backends.mps.is_available()
