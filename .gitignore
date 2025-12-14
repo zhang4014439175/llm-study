@@ -4,3 +4,5 @@ node_modules/
 venv/
 .idea
 /chapter05/gpt2
+/chapter05/model.pth
+/chapter05/model_and_optimizer.pth
