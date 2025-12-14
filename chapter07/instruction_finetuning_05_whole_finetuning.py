@@ -11,10 +11,11 @@ import torch
 # 导入自定义模块
 from chapter04.styc_04_dummy_gpt_model import GPTModel
 from chapter05.calculate_loss import calc_loss_loader
+from chapter05.get_device import get_torch_device
 from chapter05.gpt_download import download_and_load_gpt2
 from chapter05.openai import load_weights_into_gpt
 from chapter05.pretraining import generate, text_to_token_ids, token_ids_to_text, train_model_simple, \
-    plot_losses
+    plot_losses, text_to_token_ids_mac
 from chapter07.instruction_finetuning_01_mian_instruction_dataset_class import InstructionDataset, custom_collate_fn, \
     format_input
 
@@ -58,7 +59,8 @@ def test():
     # print(tokenizer.encode("<|endoftext|>", allowed_special={"<|endoftext|>"}))
     
     # 设置设备 (GPU 或 CPU)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_torch_device()
     print("Device:", device)
 
     # 自定义 collate_fn，用于 batch 数据处理
@@ -106,9 +108,9 @@ def test():
         num_workers=num_workers
     )
 
-    print("Train loader:")
-    for inputs, targets in train_loader:
-        print(inputs.shape, targets.shape)
+    # print("Train loader:")
+    # for inputs, targets in train_loader:
+    #     print(inputs.shape, targets.shape)
 
     # 基础模型配置
     BASE_CONFIG = {
@@ -137,8 +139,15 @@ def test():
     
     # 初始化模型并加载权重
     model = GPTModel(BASE_CONFIG)
+    # 打印加载前的一个权重切片（例如第一层注意力的权重和）
+    print("Weight sum before loading:", model.trf_blocks[0].att.W_query.weight.sum().item())
     load_weights_into_gpt(model, params)
+    model.to(device)
+    # 打印加载后的权重和
+    print("Weight sum after loading:", model.trf_blocks[0].att.W_query.weight.sum().item())
     model.eval()
+    print(model.tok_emb.weight.std())
+    # print(model.lm_head.weight.data_ptr() == model.tok_emb.weight.data_ptr())
 
     # == 微调前测试 ==
     # 测试一条数据，看看微调前的模型表现
@@ -148,7 +157,7 @@ def test():
 
     token_ids = generate(
         model=model,
-        idx=text_to_token_ids(input_text, tokenizer),
+        idx=text_to_token_ids_mac(input_text, tokenizer, device),
         max_new_tokens=35,
         context_size=BASE_CONFIG["context_length"],
         eos_id=50256,
@@ -164,7 +173,7 @@ def test():
     print("====================================")
     print(response_text)
 
-    model.to(device)
+
     torch.manual_seed(123)
     
     # 计算初始 loss
@@ -249,5 +258,5 @@ def test():
 
 
 if __name__ == '__main__':
-    # test()
-    torch.backends.mps.is_available()
+    test()
+    # torch.backends.mps.is_available()

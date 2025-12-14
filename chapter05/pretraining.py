@@ -48,6 +48,12 @@ def text_to_token_ids(text, tokenizer):
     return encoded_tensor
 
 
+def text_to_token_ids_mac(text, tokenizer, device):
+    encoded = tokenizer.encode(text, allowed_special={'<|endoftext|>'})
+    encoded_tensor = torch.tensor(encoded, device=device).unsqueeze(0)
+    return encoded_tensor
+
+
 # 这个方法 token_ids_to_text 的作用是将一个包含token IDs的Tensor转换为对应的文本字符串。
 # 这个过程通常用于自然语言处理（NLP）任务中，特别是在使用基于token的模型（如BERT、GPT等）时。
 def token_ids_to_text(token_ids, tokenizer):
@@ -310,7 +316,7 @@ def pretrain():
     tokenizer = tiktoken.get_encoding("gpt2")
     token_ids = generate_text_simple(
         model=model,
-        idx=text_to_token_ids("Every effort moves you", tokenizer),
+        idx=text_to_token_ids_mac("Every effort moves you", tokenizer, device),
         max_new_tokens=25,
         context_size=GPT_CONFIG_124M["context_length"]
     )
@@ -319,7 +325,7 @@ def pretrain():
     tokenizer = tiktoken.get_encoding("gpt2")
     token_ids = generate(
         model=model,
-        idx=text_to_token_ids("Every effort moves you", tokenizer),
+        idx=text_to_token_ids_mac("Every effort moves you", tokenizer, device),
         max_new_tokens=15,
         context_size=GPT_CONFIG_124M["context_length"],
         top_k=25,
