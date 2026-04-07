@@ -42,6 +42,7 @@ def calculate_loss():
     # 这里[0, 1, 2]是一个索引列表，指定了感兴趣的位置
     # targets[text_idx]给出了在这些位置上我们感兴趣的词汇表中的索引
     # 两个例子为了演示loss的计算
+
     # 4、取出targets中文本索引的概率，effort moves you中第3626个概率,really like chocolate中，第588个概率
     # probas 每个位置上对整个词表的 softmax 概率分布
     # targets（正确的 token ID）。targets（正确的 token ID）。
@@ -85,6 +86,25 @@ def calculate_loss():
     print("Flattened logits:", logits_flat.shape)
     print("Flattened targets:", targets_flat.shape)
     loss = torch.nn.functional.cross_entropy(logits_flat, targets_flat)
+
+    # 索引 0: "我"  索引 1: "吃"  索引 2: "苹"  索引 3: "果"
+    # 真实目标 (Targets) 是：["吃", "苹"]，对应的索引是 [1, 2]
+    # Step 1: 假设模型的预测概率 (对应代码里的 probas)
+    # 经过 Softmax 处理后，模型会给词表里的每一个词打分（概率之和为 1）。假设模型输出的概率分布如下：
+    # 位置 1 的预测概率： [0.05, 0.80, 0.10, 0.05]
+    # (模型认为下一个词是 "吃" 的概率高达 0.80，预测得很准)
+    # 位置 2 的预测概率： [0.20, 0.20, 0.50, 0.10]
+    # (模型认为下一个词是 "苹" 的概率是 0.50，稍微有些犹豫)
+    # Step 2: 提取正确答案的概率 (对应代码里的 target_probas)模型对其他词的预测概率我们根本不关心，交叉熵损失只看模型给“正确答案”分配了多少概率。
+    # 我们把正确答案的概率“摘”出来：
+    # 位置 1 的正确答案是索引 1 ("吃")，提取出的概率 $p_1 = 0.80$
+    # 位置 2 的正确答案是索引 2 ("苹")，提取出的概率 $p_2 = 0.50$
+    # Step 3: 取自然对数 (对应代码里的 log_probas)因为概率是 $0$ 到 $1$ 之间的小数，直接连乘会导致数值太小（Underflow），
+    # 所以数学上我们取自然对数 $\ln$。$\ln(0.80) \approx -0.223$$\ln(0.50) \approx -0.693$
+    # (注：概率越接近 1，对数结果越接近 0；概率越小，对数结果的负值越大。)
+    # Step 4: 求平均值并取反 (得出最终的 Loss)现在我们把取完对数的值加起来求平均：
+    # $$Average = \frac{-0.223 + (-0.693)}{2} = -0.458$$
+    # 因为我们希望“损失”是一个正数，所以给它乘上 $-1$：$$Loss = -(-0.458) = 0.458$$
     print(loss)
 
 
@@ -132,3 +152,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
         else:
             break
     return total_loss / num_batches
+
+
+if __name__ == '__main__':
+    calculate_loss()
